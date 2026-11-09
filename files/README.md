@@ -9,3 +9,4 @@
 | [style-01-time-loop-drama.md](style-01-time-loop-drama.md) | Мрачная мистическая история с петлёй времени | Тихо, тревожно, трогательно |
 | [style-02-ai-battle-comedy.md](style-02-ai-battle-comedy.md) | Комедийное «соревнование» двух персонажей | Ярко, громко, мемно |
 | [common-tiktok-format.md](common-tiktok-format.md) | Общие правила формата для обоих стилей | — |
+| [animations.md](animations.md) | Анимации: персонажи, камера, переходы, эффекты, интерфейс, субтитры | — |
