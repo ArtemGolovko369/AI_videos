@@ -121,3 +121,14 @@
 **Описание:** 6 правил, которые помогут пережить землетрясение за городом — рядом с незнакомцами. А вы бы справились? 👇
 **Хэштеги:** #чтоесли #землетрясение #выживание #дача #shorts
 **Обложка:** треснувший дачный домик в сумерках, крупно — часы 03:17, надпись «ПО РАСПИСАНИЮ?»
+
+---
+
+## Готовое видео (vidIQ)
+
+- **Видео (9:16, 1080×1920, 88 сек):** https://assets.vidiq.com/compositions/af5846bc-d022-4568-b7fe-0b49f09631a7/er4vp3firloc38v7a7t5n8p7.mp4
+- **Озвучка (голос Brian, 88 сек):** https://assets.vidiq.com/voiceovers/af5846bc-d022-4568-b7fe-0b49f09631a7/e1707e97-49b2-446c-9afd-f98e0a7e0322.mp3
+- Кадры: стоковые клипы Pexels (ИИ-генерация не поместилась в баланс кредитов).
+
+### Авторы стоковых кадров (Pexels) — указать в описании
+Wela Gujjar, Monstera Production, Evgeniy Bogdan, Ninety Seven Years, Tanita Lupa, Deeana Arts, Katya Wolf, Ron Lach, Bruchin Noeka, Reelssman, Katerina Makhtadui, Timur Weber, Tima Miroshnichenko, Mikhail Nilov, Asad Ansari, Şahin Doğdu, Anton Kudryashov.
