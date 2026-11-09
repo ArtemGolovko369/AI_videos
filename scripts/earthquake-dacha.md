@@ -132,3 +132,8 @@
 
 ### Авторы стоковых кадров (Pexels) — указать в описании
 Wela Gujjar, Monstera Production, Evgeniy Bogdan, Ninety Seven Years, Tanita Lupa, Deeana Arts, Katya Wolf, Ron Lach, Bruchin Noeka, Reelssman, Katerina Makhtadui, Timur Weber, Tima Miroshnichenko, Mikhail Nilov, Asad Ansari, Şahin Doğdu, Anton Kudryashov.
+
+---
+
+## Видео v2 (по инструкциям из `files/`, стиль 1)
+Готовый ролик и исходники: [`videos/earthquake-dacha/`](../videos/earthquake-dacha/README.md). Стоковые кадры Pexels в v2 не используются.
