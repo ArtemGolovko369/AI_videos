@@ -120,8 +120,8 @@ class Canvas:
         ox, oy = self.P(other.x0 + x, other.y0 + y)
         self.img.alpha_composite(other.img, (int(ox), int(oy)))
 
-    def done(self, blur=0):
-        im = self.img.resize((self.w, self.h), Image.LANCZOS)
+    def done(self, blur=0, scale=1):
+        im = self.img.resize((int(self.w * scale), int(self.h * scale)), Image.LANCZOS)
         if blur:
             im = im.filter(ImageFilter.GaussianBlur(blur))
         return im
@@ -443,3 +443,23 @@ def write_wav(path, x):
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(data.tobytes())
+
+
+def silhouette(d, x, yf, h, col, panic=0.0, ph=0.0, arms_up=False):
+    """Упрощённая фигура-прохожий, рисуется покадрово."""
+    hr = h * 0.085
+    sw = math.sin(ph) * 0.12 * h
+    d.ellipse([x - hr, yf - h * 0.98, x + hr, yf - h * 0.98 + 2 * hr], fill=col)
+    d.polygon([(x - h * 0.14, yf - h * 0.8), (x + h * 0.14, yf - h * 0.8),
+               (x + h * 0.16, yf - h * 0.42), (x - h * 0.16, yf - h * 0.42)], fill=col)
+    lw = max(3, int(h * 0.07))
+    d.line([(x - h * 0.06, yf - h * 0.44), (x - h * 0.06 + sw, yf)], fill=col, width=lw)
+    d.line([(x + h * 0.06, yf - h * 0.44), (x + h * 0.06 - sw, yf)], fill=col, width=lw)
+    up = arms_up or panic > 0.5
+    a = math.sin(ph * 1.7) * 0.08 * h
+    if up:
+        d.line([(x - h * 0.13, yf - h * 0.78), (x - h * 0.24, yf - h * 1.06 + a)], fill=col, width=lw)
+        d.line([(x + h * 0.13, yf - h * 0.78), (x + h * 0.24, yf - h * 1.06 - a)], fill=col, width=lw)
+    else:
+        d.line([(x - h * 0.14, yf - h * 0.78), (x - h * 0.2 - sw * 0.4, yf - h * 0.45)], fill=col, width=lw)
+        d.line([(x + h * 0.14, yf - h * 0.78), (x + h * 0.2 + sw * 0.4, yf - h * 0.45)], fill=col, width=lw)
