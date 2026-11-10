@@ -23,8 +23,12 @@ function blink(t, seed) {
 const ch = (svg, x, y, s = 1, flip = false) =>
   `<g transform="translate(${x},${y}) scale(${flip ? -s : s},${s}) translate(-200,-900)">${svg}</g>`;
 const at = (svg, x, y, s = 1, r = 0) => `<g transform="translate(${x},${y}) rotate(${r}) scale(${s})">${svg}</g>`;
-const cam = (svg, z = 1, cx = 540, cy = 960) =>
-  `<g transform="translate(540,960) scale(${z}) translate(${-cx},${-cy})">${svg}</g>`;
+const cam = (svg, z = 1, cx = 540, cy = 960) => {
+  z = Math.max(1, z);
+  cx = Math.min(Math.max(cx, 540 / z), 1080 - 540 / z);
+  cy = Math.min(Math.max(cy, 960 / z), 1920 - 960 / z);
+  return `<g transform="translate(540,960) scale(${z}) translate(${-cx},${-cy})">${svg}</g>`;
+};
 const txt = (x, y, s, size, fill = INK, o = {}) =>
   `<text x="${x}" y="${y}" font-family="DejaVu Sans" font-weight="bold" font-size="${size}" fill="${fill}" text-anchor="${o.anchor || "middle"}" ${o.stroke ? `stroke="${o.stroke}" stroke-width="${o.sw || 10}" paint-order="stroke" stroke-linejoin="round"` : ""} opacity="${o.op ?? 1}">${s}</text>`;
 const popS = (t, t0, d = 0.3) => (t < t0 ? 0 : eback((t - t0) / d));
