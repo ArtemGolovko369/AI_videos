@@ -13,8 +13,8 @@ const { P, INK } = L;
 const FPS = 30;
 const VOICE_END = TM[TM.length - 1].end;
 const END_T = VOICE_END + 0.45;
-const TOTAL = END_T + 4.4;
-const XF = 0.3;
+const TOTAL = END_T + 3.6;
+const XF = 0.25;
 const OUT = path.join(__dirname, "..", "out");
 
 const starts = SC.map((s, i) => (i === 0 ? 0 : TM[s.phrase].start - 0.3));
@@ -113,7 +113,7 @@ function frame(t) {
     }
   }
   let chip = "";
-  if (t < 3.2) chip = `<g opacity="${clamp((3.2 - t) / 0.3)}"><rect x="330" y="70" width="420" height="64" rx="32" fill="#fffaf0" stroke="${INK}" stroke-width="5"/>${txt(540, 113, "ВЫМЫШЛЕННАЯ ИСТОРИЯ", 28)}</g>`;
+  if (t < 2.8) chip = `<g opacity="${clamp((2.8 - t) / 0.3)}"><rect x="330" y="70" width="420" height="64" rx="32" fill="#fffaf0" stroke="${INK}" stroke-width="5"/>${txt(540, 113, "ВЫМЫШЛЕННАЯ ИСТОРИЯ", 28)}</g>`;
   const fadeOut = t > TOTAL - 0.4 ? `<rect width="1080" height="1920" fill="#000" opacity="${clamp((t - (TOTAL - 0.4)) / 0.4)}"/>` : "";
   return body + hud(t) + chip + subs(t) + fadeOut;
 }

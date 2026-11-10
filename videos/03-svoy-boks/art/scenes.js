@@ -78,7 +78,7 @@ const def = (phrase, fn) => SC.push({ phrase, fn });
 
 // 1. Руки и чужой сервис
 def(0, (t, lt) => {
-  const z = lerp(2.6, 1.0, eio((lt - 0.6) / 2.2));
+  const z = lerp(2.6, 1.0, eio((lt - 0.4) / 1.9));
   const lift = `<rect x="560" y="820" width="30" height="500" fill="${P.steel}" stroke="${INK}" stroke-width="6"/>
     <rect x="960" y="820" width="30" height="500" fill="${P.steel}" stroke="${INK}" stroke-width="6"/>
     <rect x="520" y="800" width="510" height="26" fill="${P.mustard}" stroke="${INK}" stroke-width="6"/>${at(L.car("#6d9bd1"), 520, 560, 1.0)}`;
@@ -87,7 +87,7 @@ def(0, (t, lt) => {
     `<g transform="translate(380,520) rotate(-6)"><rect x="-150" y="-44" width="300" height="88" rx="14" fill="${P.red}" stroke="${INK}" stroke-width="6"/>${txt(0, 16, "МАСТЕРУ — 30%", 36, "#fff")}</g>` +
     ch(L.anton({ ra: "up", expr: "neutral", blink: blink(t, 1) }), 330, 1560, 1.05) + wrench +
     `<circle cx="300" cy="1200" r="18" fill="#4a3a30" opacity=".5"/><circle cx="420" cy="1160" r="10" fill="#4a3a30" opacity=".5"/>`;
-  return cam(scene, z, lerp(430, 540, eio((lt - 0.6) / 2.2)), lerp(700, 960, eio((lt - 0.6) / 2.2)));
+  return cam(scene, z, lerp(430, 540, eio((lt - 0.4) / 1.9)), lerp(700, 960, eio((lt - 0.4) / 1.9)));
 });
 
 // 2. Накопления за четыре года
@@ -205,7 +205,7 @@ def(9, (t, lt) => {
   for (let d = 0; d < 7; d++) {
     const x = 670 + (d % 4) * 76, y = 480 + Math.floor(d / 4) * 90;
     s += `<rect x="${x}" y="${y}" width="60" height="60" rx="6" fill="#fff" stroke="${INK}" stroke-width="4"/>${txt(x + 30, y + 42, d + 1, 26)}`;
-    if (lt > 0.2 + d * 0.25) s += `<path d="M${x + 6},${y + 6} l48,48 M${x + 54},${y + 6} l-48,48" stroke="${P.red}" stroke-width="7"/>`;
+    if (lt > 0.1 + d * 0.17) s += `<path d="M${x + 6},${y + 6} l48,48 M${x + 54},${y + 6} l-48,48" stroke="${P.red}" stroke-width="7"/>`;
   }
   return cam(s, lerp(1.0, 1.06, lt / 2.4));
 });
@@ -301,7 +301,7 @@ def(17, (t, lt) => {
 def(18, (t, lt) => {
   let s = L.bgOwn().replace(`fill="${P.sky}"`, `fill="#f2b88a"`).replace(`fill="#ffe08a" opacity=".9"`, `fill="#ff9d6a" opacity=".9"`);
   for (let i = 0; i < 6; i++) {
-    const off = lt > 1.2 + i * 0.45;
+    const off = lt > 0.5 + i * 0.4;
     s += `<rect x="${70 + i * 162}" y="760" width="136" height="420" fill="${off ? "#4a5358" : "#ffe7a3"}" stroke="${INK}" stroke-width="6"/>`;
   }
   s += `<rect width="1080" height="1920" fill="#3a2a40" opacity="${0.15 + 0.25 * clamp(lt / 4)}"/>`;
