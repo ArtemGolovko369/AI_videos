@@ -33,7 +33,7 @@ const DATA = {
   } else {
     const from = +(a2 || 0), to = Math.min(+(a3 || total), total);
     const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', '30', '-i', '-',
-      '-vf', 'noise=alls=7:allf=t,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', a1], { stdio: ['pipe', 'inherit', 'inherit'] });
+      '-vf', 'noise=alls=6,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', a1], { stdio: ['pipe', 'inherit', 'inherit'] });
     const n0 = Math.round(from * 30), n1 = Math.round(to * 30);
     const t0 = Date.now();
     for (let n = n0; n < n1; n++) {
