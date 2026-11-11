@@ -316,13 +316,20 @@ def(18, (t, lt) => {
 });
 
 // Финальная карточка
+function subscribeBanner(t, lt, part) {
+  const k = eback(clamp(lt / 0.35));
+  const pulse = 1 + 0.035 * Math.sin(Math.max(0, lt - 0.4) * 6);
+  return `<g transform="translate(540,800) scale(${k * pulse})">
+    <rect x="-430" y="-95" width="860" height="190" rx="95" fill="${P.red}" stroke="${INK}" stroke-width="8"/>
+    ${txt(0, -12, "ПОДПИШИСЬ 🔔", 64, "#fff")}
+    ${txt(0, 52, `чтобы не пропустить ${part} часть`, 40, "#fff3e6")}</g>`;
+}
 function endCard(t, lt) {
   const k = clamp(lt / 0.4);
-  return `<rect width="1080" height="1920" fill="${P.cream}"/>
-  ${at(L.thermos(), 500, 560, 1.4)}${steam(556, 540, t)}
+  return `<rect width="1080" height="1920" fill="${P.cream}"/>${subscribeBanner(t, lt, 2)}
+  ${at(L.thermos(), 516, 330, 1.1)}${steam(560, 315, t)}
   ${txt(540, 1040, "А ВЫ БЫ УШЛИ", 82, INK, { op: k })}${txt(540, 1140, "НА СВОЁ В 45?", 82, P.tealD, { op: k })}
-  ${txt(540, 1300, "Пишите в комментариях 👇", 52, P.greyD, { op: clamp((lt - 0.8) / 0.4) })}
-  ${txt(540, 1420, "История и герои вымышлены", 32, P.grey, { op: clamp((lt - 1.2) / 0.4) })}`;
+  ${txt(540, 1300, "Пишите в комментариях 👇", 52, P.greyD, { op: clamp((lt - 0.8) / 0.4) })}`;
 }
 
 module.exports = { SC, endCard, TM, clamp, lerp, eio, eout, eback, wt, pstart, txt, at, popS };

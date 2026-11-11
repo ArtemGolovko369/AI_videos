@@ -237,13 +237,20 @@ def(18, (t, lt) => {
   return cam(s, lerp(1.0, 1.06, lt / 2), 540, 1150);
 });
 
+function subscribeBanner(t, lt, part) {
+  const k = eback(clamp(lt / 0.35));
+  const pulse = 1 + 0.035 * Math.sin(Math.max(0, lt - 0.4) * 6);
+  return `<g transform="translate(540,800) scale(${k * pulse})">
+    <rect x="-430" y="-95" width="860" height="190" rx="95" fill="${P.red}" stroke="${INK}" stroke-width="8"/>
+    ${txt(0, -12, "ПОДПИШИСЬ 🔔", 64, "#fff")}
+    ${txt(0, 52, `чтобы не пропустить ${part} часть`, 40, "#fff3e6")}</g>`;
+}
 function endCard(t, lt) {
   const k = clamp(lt / 0.4);
-  return `<rect width="1080" height="1920" fill="${P.cream}"/>${at(L.lift({ h: 420 }), 315, 300, 1.0)}
+  return `<rect width="1080" height="1920" fill="${P.cream}"/>${subscribeBanner(t, lt, 3)}${at(L.lift({ h: 420 }), 382, 250, 0.7)}
   ${txt(540, 1060, "ЧТО ДЕЛАТЬ АНТОНУ?", 74, INK, { op: k })}
   ${txt(540, 1160, "ВЕРНУТЬ МАСТЕРОВ", 58, P.red, { op: k })}${txt(540, 1240, "ИЛИ РАСТИТЬ СВОИХ?", 58, P.tealD, { op: k })}
-  ${txt(540, 1380, "Пишите в комментариях 👇", 52, P.greyD, { op: clamp((lt - 0.6) / 0.4) })}
-  ${txt(540, 1490, "Часть 2 · История и герои вымышлены", 32, P.grey, { op: clamp((lt - 0.9) / 0.4) })}`;
+  ${txt(540, 1380, "Пишите в комментариях 👇", 52, P.greyD, { op: clamp((lt - 0.6) / 0.4) })}`;
 }
 
 module.exports = { SC, endCard, TM, clamp, lerp, eio, eout, eback, wt, pstart, txt, at, popS };

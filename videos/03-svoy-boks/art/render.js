@@ -13,7 +13,7 @@ const { P, INK } = L;
 const FPS = 30;
 const VOICE_END = TM[TM.length - 1].end;
 const END_T = VOICE_END + 0.45;
-const TOTAL = END_T + 3.6;
+const TOTAL = END_T + 4.4;
 const XF = 0.25;
 const OUT = path.join(__dirname, "..", "out");
 
