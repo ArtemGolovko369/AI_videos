@@ -10,5 +10,6 @@
 | [style-02-ai-battle-comedy.md](style-02-ai-battle-comedy.md) | Комедийное «соревнование» двух персонажей | Ярко, громко, мемно |
 | [style-03-what-if.md](style-03-what-if.md) | «Что если…»: мир, где что-то исчезло, сериал с клиффхэнгером | Спокойно, тревожно, жутковато |
 | [common-tiktok-format.md](common-tiktok-format.md) | Общие правила формата для обоих стилей | — |
+| [pre-production-questions.md](pre-production-questions.md) | Вопросы, которые нужно задать перед созданием видео | — |
 | [voiceover.md](voiceover.md) | Озвучка: голоса, подача по стилям, генерация через vidIQ | — |
 | [animations.md](animations.md) | Анимации: персонажи, камера, переходы, эффекты, интерфейс, субтитры | — |
