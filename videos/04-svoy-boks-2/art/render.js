@@ -109,7 +109,7 @@ function frame(t) {
     }
   }
   let chip = "";
-  if (t < 3.0) chip = `<g opacity="${clamp((3.0 - t) / 0.3)}"><rect x="210" y="210" width="660" height="64" rx="32" fill="#fffaf0" stroke="${INK}" stroke-width="5"/>${txt(540, 253, "ЧАСТЬ 2 · ВЫМЫШЛЕННАЯ ИСТОРИЯ", 28)}</g>`;
+  if (t < 3.0) chip = `<g opacity="${clamp((3.0 - t) / 0.3)}"><rect x="300" y="210" width="480" height="64" rx="32" fill="#fffaf0" stroke="${INK}" stroke-width="5"/>${txt(540, 253, "ЧАСТЬ 2 · СВОЙ БОКС", 28)}</g>`;
   const fadeOut = t > TOTAL - 0.4 ? `<rect width="1080" height="1920" fill="#000" opacity="${clamp((t - (TOTAL - 0.4)) / 0.4)}"/>` : "";
   return body + hud(t) + chip + subs(t) + fadeOut;
 }
