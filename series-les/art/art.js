@@ -291,14 +291,14 @@ function flame(x, y, s = 1, t = 0) {
   </g>`;
 }
 
-function note(x, y, s = 1, rot = -4) {
+function note(x, y, s = 1, rot = -4, sign = "#2a2420") {
   return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">
     <rect x="-150" y="-100" width="300" height="200" fill="#d8ccae"/>
     <path d="M-150 -100 L150 -100 L150 90 L130 100 L-150 100 Z" fill="#e4d8bb"/>
     <text x="0" y="-38" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-weight="bold" font-size="30" fill="#2a2420">НОЧУЙТЕ.</text>
     <text x="0" y="6" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-weight="bold" font-size="26" fill="#2a2420">ПОДВАЛ</text>
     <text x="0" y="40" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-weight="bold" font-size="26" fill="#2a2420">НЕ ОТКРЫВАТЬ.</text>
-    <text x="40" y="82" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="22" fill="${o_noteRed}">— ХОЗЯИН</text>
+    <text x="40" y="82" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="22" fill="${sign}">— ХОЗЯИН</text>
   </g>`;
 }
 var o_noteRed = '#2a2420';
@@ -537,8 +537,8 @@ function bgHatchFromBelow(o = {}) {
   <rect x="300" y="420" width="480" height="${360 * open}" fill="#191a24"/>
   <g clip-path="url(#hatchHole)">
     <rect x="300" y="420" width="480" height="360" fill="#22202a"/>
-    <g transform="translate(130 ${270 + (1 - open) * 400}) scale(2.0)">${owner({ smile, blink: o.blink })}</g>
-    <rect x="300" y="420" width="480" height="360" fill="${PAL.fire2}" opacity="${0.12 * lit}" style="mix-blend-mode:screen"/>
+    <g transform="translate(130 ${190 + (1 - open) * 420}) scale(2.0)">${owner({ smile, blink: o.blink })}</g>
+    <rect x="300" y="420" width="480" height="360" fill="${PAL.fire2}" opacity="${0.22 * lit}" style="mix-blend-mode:screen"/><ellipse cx="540" cy="760" rx="300" ry="200" fill="url(#fireGlow)" opacity="${0.8 * lit}"/>
   </g>
   <!-- крышка люка поднята -->
   <path d="M300 ${420} L780 420 L800 ${420 - lift * 0.5} L280 ${420 - lift * 0.5} Z" fill="#2a2026" opacity="${open > 0 ? 1 : 0}"/>
