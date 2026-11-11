@@ -1,0 +1,548 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="2350" viewBox="0 0 2100 2350"><defs>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n"/>
+    <feColorMatrix type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="table" tableValues="0 0.10"/></feComponentTransfer>
+    <feComposite in2="SourceGraphic" operator="in"/>
+  </filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="blur20"><feGaussianBlur stdDeviation="20"/></filter>
+  <filter id="blur40"><feGaussianBlur stdDeviation="40"/></filter>
+  <radialGradient id="vign" cx="50%" cy="48%" r="70%">
+    <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0.85"/>
+  </radialGradient>
+  <radialGradient id="fireGlow">
+    <stop offset="0%" stop-color="#ffc75a" stop-opacity="0.75"/>
+    <stop offset="35%" stop-color="#ff8a2a" stop-opacity="0.30"/>
+    <stop offset="100%" stop-color="#ff8a2a" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="coldGlow">
+    <stop offset="0%" stop-color="#9fb4d8" stop-opacity="0.45"/>
+    <stop offset="100%" stop-color="#9fb4d8" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="skyNight" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#070a14"/><stop offset="100%" stop-color="#1c2338"/>
+  </linearGradient>
+  <linearGradient id="skyDay" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#9aa3a6"/><stop offset="100%" stop-color="#c9c7bd"/>
+  </linearGradient></defs><rect width="2100" height="2350" fill="#0f1220"/><text x="1050" y="90" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="60" fill="#e9e2d0">ВЫЖИВАНИЕ В ЛЕСУ — ПЕРСОНАЖИ</text><ellipse cx="350" cy="1240" rx="260" ry="34" fill="#000" opacity=".4"/><g transform="translate(70 176) scale(1.4)"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="174" cy="202" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="174" cy="204" r="8" fill="#241712"/>
+        <circle cx="176.5" cy="200" r="2.6" fill="#fff"/><path d="M161 175 Q174 169 187 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="226" cy="202" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="226" cy="204" r="8" fill="#241712"/>
+        <circle cx="228.5" cy="200" r="2.6" fill="#fff"/><path d="M213 175 Q226 169 239 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M187 243 Q200 255 213 243" stroke="#5a2a22" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g></g><text x="350" y="1330" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="52" fill="#e9e2d0">СВЕТА, 38</text><text x="350" y="1385" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="32" fill="#9aa3b8">курьер · рассказчица</text><text x="350" y="1430" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="28" fill="#9aa3b8">тёплый цвет: оранжевая куртка</text><ellipse cx="1050" cy="1240" rx="260" ry="34" fill="#000" opacity=".4"/><g transform="translate(770 176) scale(1.4)"><g>
+    <!-- ноги -->
+    <rect x="154" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <rect x="206" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <ellipse cx="172" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <ellipse cx="228" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <!-- руки -->
+    <g transform="rotate(0 140 330)">
+      <rect x="106" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="127" cy="538" r="19" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 260 330)">
+      <rect x="252" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="273" cy="538" r="19" fill="#e6b594"/>
+      <rect x="262" y="500" width="22" height="70" rx="6" fill="#202020"/><rect x="258" y="566" width="30" height="16" rx="4" fill="#3a3a3a"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 292 260 310 L272 610 Q200 626 128 610 Z" fill="#2b3b5c"/>
+    <path d="M200 300 L200 616" stroke="#1c2840" stroke-width="5"/>
+    <rect x="132" y="560" width="136" height="16" fill="#151b2a"/>
+    <rect x="190" y="556" width="20" height="24" rx="3" fill="#8c8f99"/>
+    <path d="M148 308 L176 314 L172 330 L144 324 Z" fill="#3d5280"/>
+    <path d="M252 308 L224 314 L228 330 L256 324 Z" fill="#3d5280"/>
+    <path d="M232 380 l12 -8 l12 8 l-2 18 l-10 8 l-10 -8 Z" fill="#d8b23a"/>
+    <rect x="148" y="390" width="40" height="30" rx="4" fill="#1c2840"/>
+    <path d="M162 296 Q200 330 238 296 L232 282 Q200 304 168 282 Z" fill="#1c2840"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <circle cx="200" cy="112" r="30" fill="#b8a27c"/>
+    <ellipse cx="200" cy="200" rx="64" ry="76" fill="#e6b594"/>
+    <path d="M134 196 Q130 122 200 120 Q272 122 266 196 Q252 158 200 150 Q150 158 134 196 Z" fill="#b8a27c"/>
+    <path d="M150 160 Q190 150 222 140" stroke="#8f7a58" stroke-width="4" fill="none"/>
+    <ellipse cx="175" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="175" cy="206" r="8" fill="#241712"/>
+        <circle cx="177.5" cy="202" r="2.6" fill="#fff"/><path d="M161 173 L187 181" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="225" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="225" cy="206" r="8" fill="#241712"/>
+        <circle cx="227.5" cy="202" r="2.6" fill="#fff"/><path d="M213 181 L239 173" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 246 L210 246" stroke="#5a2a22" stroke-width="4" stroke-linecap="round"/>
+  </g></g><text x="1050" y="1330" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="52" fill="#e9e2d0">МАРИНА</text><text x="1050" y="1385" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="32" fill="#9aa3b8">одноклассница · полицейская</text><text x="1050" y="1430" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="28" fill="#9aa3b8">холодный цвет: тёмно-синий</text><ellipse cx="1750" cy="1240" rx="260" ry="34" fill="#000" opacity=".4"/><g transform="translate(1470 176) scale(1.4)"><g transform="rotate(4 200 760)">
+    <rect x="150" y="610" width="44" height="146" rx="12" fill="#24231d"/>
+    <rect x="212" y="610" width="44" height="146" rx="12" fill="#24231d"/>
+    <ellipse cx="170" cy="758" rx="32" ry="14" fill="#0a0a08"/><ellipse cx="236" cy="758" rx="32" ry="14" fill="#0a0a08"/>
+    <!-- длинные руки -->
+    <rect x="94" y="320" width="46" height="290" rx="22" fill="#33332a" transform="rotate(6 117 330)"/>
+    <rect x="268" y="320" width="46" height="290" rx="22" fill="#33332a" transform="rotate(-6 291 330)"/>
+    <ellipse cx="96" cy="616" rx="20" ry="26" fill="#8f7a68"/>
+    <ellipse cx="312" cy="616" rx="20" ry="26" fill="#8f7a68"/>
+    <!-- ватник -->
+    <path d="M128 316 Q205 280 282 316 L292 630 Q205 650 118 630 Z" fill="#4a4a3b"/>
+    <path d="M130 360 Q205 370 280 360" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 410 Q205 420 280 410" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 460 Q205 470 280 460" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 510 Q205 520 280 510" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 560 Q205 570 280 560" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 610 Q205 620 280 610" stroke="#33332a" stroke-width="4" fill="none"/>
+    <path d="M205 300 L205 640" stroke="#33332a" stroke-width="6"/>
+    <!-- голова наклонена вперёд -->
+    <g transform="translate(10 6)">
+      <ellipse cx="200" cy="214" rx="62" ry="74" fill="#5c4d42"/>
+      <path d="M142 236 Q200 330 258 236 Q250 300 200 312 Q150 300 142 236 Z" fill="#8d877a"/>
+      <ellipse cx="200" cy="200" rx="58" ry="60" fill="#15140f" opacity="0.8"/>
+      <!-- ушанка -->
+      <path d="M128 196 Q126 118 200 112 Q276 118 272 196 L262 196 Q254 150 200 148 Q146 150 138 196 Z" fill="#2a241f"/>
+      <rect x="126" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <rect x="250" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <path d="M132 150 Q200 128 268 150" stroke="#3a322b" stroke-width="16" fill="none" stroke-linecap="round"/>
+      
+      <!-- глаза-блики -->
+      <ellipse cx="176" cy="200" rx="7" ry="5" fill="#f0e6c2"/>
+      <ellipse cx="224" cy="200" rx="7" ry="5" fill="#f0e6c2"/>
+      <!-- улыбка -->
+      <path d="M152 236 Q200 276 248 236 Q200 254 152 236 Z" fill="#efe7d0"/>
+      <path d="M152 236 Q200 276 248 236" stroke="#2a1f18" stroke-width="2.5" fill="none"/>
+      <path d="M164 240 L164 258" stroke="#2a1f18" stroke-width="2"/><path d="M176 240 L176 258" stroke="#2a1f18" stroke-width="2"/><path d="M188 240 L188 258" stroke="#2a1f18" stroke-width="2"/><path d="M200 240 L200 258" stroke="#2a1f18" stroke-width="2"/><path d="M212 240 L212 258" stroke="#2a1f18" stroke-width="2"/><path d="M224 240 L224 258" stroke="#2a1f18" stroke-width="2"/><path d="M236 240 L236 258" stroke="#2a1f18" stroke-width="2"/>
+    </g>
+  </g></g><text x="1750" y="1330" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="52" fill="#e9e2d0">СТАРЫЙ ХОЗЯИН</text><text x="1750" y="1385" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="32" fill="#9aa3b8">бывший хозяин дома</text><text x="1750" y="1430" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="28" fill="#9aa3b8">лицо в тени — только глаза и улыбка</text><text x="1050" y="1540" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="38" fill="#9aa3b8">ЭМОЦИИ И ПОЗЫ РТА (для липсинка и моргания)</text><rect x="110" y="1600" width="320" height="300" rx="24" fill="#171b2c"/><svg x="110" y="1600" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="174" cy="202" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="174" cy="204" r="8" fill="#241712"/>
+        <circle cx="176.5" cy="200" r="2.6" fill="#fff"/><path d="M161 175 Q174 169 187 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="226" cy="202" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="226" cy="204" r="8" fill="#241712"/>
+        <circle cx="228.5" cy="200" r="2.6" fill="#fff"/><path d="M213 175 Q226 169 239 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 245 L210 245" stroke="#5a2a22" stroke-width="4" stroke-linecap="round"/>
+  </g></svg><text x="270" y="1885" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">спокойна</text><rect x="500" y="1600" width="320" height="300" rx="24" fill="#171b2c"/><svg x="500" y="1600" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="174" cy="202" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="174" cy="204" r="5.5" fill="#241712"/>
+        <circle cx="176.5" cy="200" r="2.6" fill="#fff"/><path d="M160 177 L186 167" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="226" cy="202" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="226" cy="204" r="5.5" fill="#241712"/>
+        <circle cx="228.5" cy="200" r="2.6" fill="#fff"/><path d="M214 167 L240 177" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 249 Q200 242 210 249" stroke="#5a2a22" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g></svg><text x="660" y="1885" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">страх</text><rect x="890" y="1600" width="320" height="300" rx="24" fill="#171b2c"/><svg x="890" y="1600" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="174" cy="202" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="174" cy="204" r="8" fill="#241712"/>
+        <circle cx="176.5" cy="200" r="2.6" fill="#fff"/><path d="M160 173 L186 169" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="226" cy="202" rx="13" ry="12" fill="#f6f1ea"/>
+        <circle cx="226" cy="204" r="8" fill="#241712"/>
+        <circle cx="228.5" cy="200" r="2.6" fill="#fff"/><rect x="211" y="182" width="30" height="10" fill="#e6b594"/><path d="M214 177 L240 177" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M188 247 Q202 251 215 240" stroke="#5a2a22" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g></svg><text x="1050" y="1885" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">нервная шутка</text><rect x="1280" y="1600" width="320" height="300" rx="24" fill="#171b2c"/><svg x="1280" y="1600" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="174" cy="202" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="174" cy="204" r="5.5" fill="#241712"/>
+        <circle cx="176.5" cy="200" r="2.6" fill="#fff"/><path d="M160 177 L186 167" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="226" cy="202" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="226" cy="204" r="5.5" fill="#241712"/>
+        <circle cx="228.5" cy="200" r="2.6" fill="#fff"/><path d="M214 167 L240 177" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <ellipse cx="200" cy="249" rx="11" ry="13" fill="#4a1d1a"/><ellipse cx="200" cy="256" rx="6" ry="4" fill="#c4615a"/>
+  </g></svg><text x="1440" y="1885" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">рот: открыт</text><rect x="1670" y="1600" width="320" height="300" rx="24" fill="#171b2c"/><svg x="1670" y="1600" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- короб за спиной -->
+    <rect x="124" y="226" width="152" height="190" rx="14" fill="#9c5414"/>
+    <rect x="124" y="226" width="152" height="24" rx="10" fill="#b66419"/>
+    <!-- ноги -->
+    <rect x="152" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="206" y="560" width="42" height="190" rx="18" fill="#34435f"/>
+    <rect x="204" y="560" width="12" height="190" fill="#2a3650" opacity=".6"/>
+    <ellipse cx="170" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <ellipse cx="230" cy="756" rx="30" ry="16" fill="#241c19"/>
+    <!-- руки -->
+    <g transform="rotate(0 138 330)">
+      <rect x="104" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="104" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="126" cy="532" r="20" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 262 330)">
+      <rect x="252" y="318" width="44" height="210" rx="22" fill="#a95f17"/>
+      <rect x="252" y="440" width="44" height="14" fill="#efe3c4" opacity=".8"/>
+      <circle cx="274" cy="532" r="20" fill="#e6b594"/>
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 290 260 310 L276 580 Q200 600 124 580 Z" fill="#de8a2c"/>
+    <path d="M200 300 L200 590" stroke="#a95f17" stroke-width="5"/>
+    <rect x="128" y="470" width="144" height="16" fill="#efe3c4" opacity=".9"/>
+    <rect x="216" y="500" width="40" height="32" rx="4" fill="#a95f17"/>
+    <!-- лямки короба -->
+    <path d="M150 312 L162 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 312 L238 460" stroke="#6b3a10" stroke-width="12" stroke-linecap="round"/>
+    <!-- воротник -->
+    <path d="M160 298 Q200 330 240 298 L232 284 Q200 304 168 284 Z" fill="#a95f17"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <path d="M254 150 Q300 175 286 250 Q282 232 262 214 Z" fill="#4a2314"/>
+    <ellipse cx="200" cy="200" rx="66" ry="76" fill="#e6b594"/>
+    <path d="M132 200 Q128 118 200 116 Q276 116 270 196 Q256 152 214 148 Q190 172 150 170 Q138 186 132 200 Z" fill="#6a3520"/>
+    <circle cx="200" cy="120" r="10" fill="#4a2314"/>
+    <ellipse cx="160" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <ellipse cx="240" cy="228" rx="11" ry="6" fill="#e48a74" opacity=".35"/>
+    <path d="M161 204 Q174 211 187 204" stroke="#2a1a14" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M161 175 Q174 169 187 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/><path d="M213 204 Q226 211 239 204" stroke="#2a1a14" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M213 175 Q226 169 239 175" stroke="#3a2016" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 245 L210 245" stroke="#5a2a22" stroke-width="4" stroke-linecap="round"/>
+  </g></svg><text x="1830" y="1885" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">моргание</text><rect x="110" y="1960" width="320" height="300" rx="24" fill="#171b2c"/><svg x="110" y="1960" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- ноги -->
+    <rect x="154" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <rect x="206" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <ellipse cx="172" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <ellipse cx="228" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <!-- руки -->
+    <g transform="rotate(0 140 330)">
+      <rect x="106" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="127" cy="538" r="19" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 260 330)">
+      <rect x="252" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="273" cy="538" r="19" fill="#e6b594"/>
+      
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 292 260 310 L272 610 Q200 626 128 610 Z" fill="#2b3b5c"/>
+    <path d="M200 300 L200 616" stroke="#1c2840" stroke-width="5"/>
+    <rect x="132" y="560" width="136" height="16" fill="#151b2a"/>
+    <rect x="190" y="556" width="20" height="24" rx="3" fill="#8c8f99"/>
+    <path d="M148 308 L176 314 L172 330 L144 324 Z" fill="#3d5280"/>
+    <path d="M252 308 L224 314 L228 330 L256 324 Z" fill="#3d5280"/>
+    <path d="M232 380 l12 -8 l12 8 l-2 18 l-10 8 l-10 -8 Z" fill="#d8b23a"/>
+    <rect x="148" y="390" width="40" height="30" rx="4" fill="#1c2840"/>
+    <path d="M162 296 Q200 330 238 296 L232 282 Q200 304 168 282 Z" fill="#1c2840"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <circle cx="200" cy="112" r="30" fill="#b8a27c"/>
+    <ellipse cx="200" cy="200" rx="64" ry="76" fill="#e6b594"/>
+    <path d="M134 196 Q130 122 200 120 Q272 122 266 196 Q252 158 200 150 Q150 158 134 196 Z" fill="#b8a27c"/>
+    <path d="M150 160 Q190 150 222 140" stroke="#8f7a58" stroke-width="4" fill="none"/>
+    <ellipse cx="175" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="175" cy="206" r="8" fill="#241712"/>
+        <circle cx="177.5" cy="202" r="2.6" fill="#fff"/><path d="M161 173 L187 181" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="225" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="225" cy="206" r="8" fill="#241712"/>
+        <circle cx="227.5" cy="202" r="2.6" fill="#fff"/><path d="M213 181 L239 173" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 246 L210 246" stroke="#5a2a22" stroke-width="4" stroke-linecap="round"/>
+  </g></svg><text x="270" y="2245" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">серьёзна</text><rect x="500" y="1960" width="320" height="300" rx="24" fill="#171b2c"/><svg x="500" y="1960" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- ноги -->
+    <rect x="154" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <rect x="206" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <ellipse cx="172" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <ellipse cx="228" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <!-- руки -->
+    <g transform="rotate(0 140 330)">
+      <rect x="106" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="127" cy="538" r="19" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 260 330)">
+      <rect x="252" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="273" cy="538" r="19" fill="#e6b594"/>
+      
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 292 260 310 L272 610 Q200 626 128 610 Z" fill="#2b3b5c"/>
+    <path d="M200 300 L200 616" stroke="#1c2840" stroke-width="5"/>
+    <rect x="132" y="560" width="136" height="16" fill="#151b2a"/>
+    <rect x="190" y="556" width="20" height="24" rx="3" fill="#8c8f99"/>
+    <path d="M148 308 L176 314 L172 330 L144 324 Z" fill="#3d5280"/>
+    <path d="M252 308 L224 314 L228 330 L256 324 Z" fill="#3d5280"/>
+    <path d="M232 380 l12 -8 l12 8 l-2 18 l-10 8 l-10 -8 Z" fill="#d8b23a"/>
+    <rect x="148" y="390" width="40" height="30" rx="4" fill="#1c2840"/>
+    <path d="M162 296 Q200 330 238 296 L232 282 Q200 304 168 282 Z" fill="#1c2840"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <circle cx="200" cy="112" r="30" fill="#b8a27c"/>
+    <ellipse cx="200" cy="200" rx="64" ry="76" fill="#e6b594"/>
+    <path d="M134 196 Q130 122 200 120 Q272 122 266 196 Q252 158 200 150 Q150 158 134 196 Z" fill="#b8a27c"/>
+    <path d="M150 160 Q190 150 222 140" stroke="#8f7a58" stroke-width="4" fill="none"/>
+    <ellipse cx="175" cy="204" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="175" cy="206" r="5.5" fill="#241712"/>
+        <circle cx="177.5" cy="202" r="2.6" fill="#fff"/><path d="M161 179 L187 169" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="225" cy="204" rx="13" ry="19" fill="#f6f1ea"/>
+        <circle cx="225" cy="206" r="5.5" fill="#241712"/>
+        <circle cx="227.5" cy="202" r="2.6" fill="#fff"/><path d="M213 169 L239 179" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 250 Q200 243 210 250" stroke="#5a2a22" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g></svg><text x="660" y="2245" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">страх</text><rect x="890" y="1960" width="320" height="300" rx="24" fill="#171b2c"/><svg x="890" y="1960" width="320" height="260" viewBox="110 90 180 190"><g>
+    <!-- ноги -->
+    <rect x="154" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <rect x="206" y="580" width="40" height="172" rx="16" fill="#1d2333"/>
+    <ellipse cx="172" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <ellipse cx="228" cy="756" rx="30" ry="15" fill="#0e1018"/>
+    <!-- руки -->
+    <g transform="rotate(0 140 330)">
+      <rect x="106" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="127" cy="538" r="19" fill="#e6b594"/>
+    </g>
+    <g transform="rotate(0 260 330)">
+      <rect x="252" y="318" width="42" height="216" rx="21" fill="#1c2840"/>
+      <circle cx="273" cy="538" r="19" fill="#e6b594"/>
+      
+      
+    </g>
+    <!-- куртка -->
+    <path d="M140 310 Q200 292 260 310 L272 610 Q200 626 128 610 Z" fill="#2b3b5c"/>
+    <path d="M200 300 L200 616" stroke="#1c2840" stroke-width="5"/>
+    <rect x="132" y="560" width="136" height="16" fill="#151b2a"/>
+    <rect x="190" y="556" width="20" height="24" rx="3" fill="#8c8f99"/>
+    <path d="M148 308 L176 314 L172 330 L144 324 Z" fill="#3d5280"/>
+    <path d="M252 308 L224 314 L228 330 L256 324 Z" fill="#3d5280"/>
+    <path d="M232 380 l12 -8 l12 8 l-2 18 l-10 8 l-10 -8 Z" fill="#d8b23a"/>
+    <rect x="148" y="390" width="40" height="30" rx="4" fill="#1c2840"/>
+    <path d="M162 296 Q200 330 238 296 L232 282 Q200 304 168 282 Z" fill="#1c2840"/>
+    <!-- голова -->
+    <rect x="186" y="262" width="28" height="30" fill="#c08b6c"/>
+    <circle cx="200" cy="112" r="30" fill="#b8a27c"/>
+    <ellipse cx="200" cy="200" rx="64" ry="76" fill="#e6b594"/>
+    <path d="M134 196 Q130 122 200 120 Q272 122 266 196 Q252 158 200 150 Q150 158 134 196 Z" fill="#b8a27c"/>
+    <path d="M150 160 Q190 150 222 140" stroke="#8f7a58" stroke-width="4" fill="none"/>
+    <ellipse cx="175" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="171" cy="206" r="8" fill="#241712"/>
+        <circle cx="173.5" cy="202" r="2.6" fill="#fff"/><path d="M161 173 L187 181" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/><ellipse cx="225" cy="204" rx="13" ry="16" fill="#f6f1ea"/>
+        <circle cx="221" cy="206" r="8" fill="#241712"/>
+        <circle cx="223.5" cy="202" r="2.6" fill="#fff"/><path d="M213 181 L239 173" stroke="#6a5a40" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path d="M190 246 L210 246" stroke="#5a2a22" stroke-width="4" stroke-linecap="round"/>
+  </g></svg><text x="1050" y="2245" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">слушает</text><rect x="1280" y="1960" width="320" height="300" rx="24" fill="#171b2c"/><svg x="1280" y="1960" width="320" height="260" viewBox="125 95 190 190"><g transform="rotate(4 200 760)">
+    <rect x="150" y="610" width="44" height="146" rx="12" fill="#24231d"/>
+    <rect x="212" y="610" width="44" height="146" rx="12" fill="#24231d"/>
+    <ellipse cx="170" cy="758" rx="32" ry="14" fill="#0a0a08"/><ellipse cx="236" cy="758" rx="32" ry="14" fill="#0a0a08"/>
+    <!-- длинные руки -->
+    <rect x="94" y="320" width="46" height="290" rx="22" fill="#33332a" transform="rotate(6 117 330)"/>
+    <rect x="268" y="320" width="46" height="290" rx="22" fill="#33332a" transform="rotate(-6 291 330)"/>
+    <ellipse cx="96" cy="616" rx="20" ry="26" fill="#8f7a68"/>
+    <ellipse cx="312" cy="616" rx="20" ry="26" fill="#8f7a68"/>
+    <!-- ватник -->
+    <path d="M128 316 Q205 280 282 316 L292 630 Q205 650 118 630 Z" fill="#4a4a3b"/>
+    <path d="M130 360 Q205 370 280 360" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 410 Q205 420 280 410" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 460 Q205 470 280 460" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 510 Q205 520 280 510" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 560 Q205 570 280 560" stroke="#33332a" stroke-width="4" fill="none"/><path d="M130 610 Q205 620 280 610" stroke="#33332a" stroke-width="4" fill="none"/>
+    <path d="M205 300 L205 640" stroke="#33332a" stroke-width="6"/>
+    <!-- голова наклонена вперёд -->
+    <g transform="translate(10 6)">
+      <ellipse cx="200" cy="214" rx="62" ry="74" fill="#5c4d42"/>
+      <path d="M142 236 Q200 330 258 236 Q250 300 200 312 Q150 300 142 236 Z" fill="#8d877a"/>
+      <ellipse cx="200" cy="205" rx="56" ry="58" fill="#b88f74"/>
+      <!-- ушанка -->
+      <path d="M128 196 Q126 118 200 112 Q276 118 272 196 L262 196 Q254 150 200 148 Q146 150 138 196 Z" fill="#2a241f"/>
+      <rect x="126" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <rect x="250" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <path d="M132 150 Q200 128 268 150" stroke="#3a322b" stroke-width="16" fill="none" stroke-linecap="round"/>
+      <circle cx="178" cy="204" r="6" fill="#2a1d16"/><circle cx="222" cy="204" r="6" fill="#2a1d16"/>
+      <path d="M162 188 L190 182 M210 182 L238 188" stroke="#4a3a30" stroke-width="5" stroke-linecap="round"/>
+      <path d="M186 246 Q200 238 214 246" stroke="#4a2a22" stroke-width="4" fill="none"/>
+    </g>
+  </g></svg><text x="1440" y="2245" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">лицо (воспоминание)</text><rect x="1670" y="1960" width="320" height="300" rx="24" fill="#171b2c"/><svg x="1670" y="1960" width="320" height="260" viewBox="125 95 190 190"><g transform="rotate(4 200 760)">
+    <rect x="150" y="610" width="44" height="146" rx="12" fill="#06070a"/>
+    <rect x="212" y="610" width="44" height="146" rx="12" fill="#06070a"/>
+    <ellipse cx="170" cy="758" rx="32" ry="14" fill="#0a0a08"/><ellipse cx="236" cy="758" rx="32" ry="14" fill="#0a0a08"/>
+    <!-- длинные руки -->
+    <rect x="94" y="320" width="46" height="290" rx="22" fill="#050609" transform="rotate(6 117 330)"/>
+    <rect x="268" y="320" width="46" height="290" rx="22" fill="#050609" transform="rotate(-6 291 330)"/>
+    <ellipse cx="96" cy="616" rx="20" ry="26" fill="#06070a"/>
+    <ellipse cx="312" cy="616" rx="20" ry="26" fill="#06070a"/>
+    <!-- ватник -->
+    <path d="M128 316 Q205 280 282 316 L292 630 Q205 650 118 630 Z" fill="#07080c"/>
+    
+    <path d="M205 300 L205 640" stroke="#050609" stroke-width="6"/>
+    <!-- голова наклонена вперёд -->
+    <g transform="translate(10 6)">
+      <ellipse cx="200" cy="214" rx="62" ry="74" fill="#07080c"/>
+      
+      <ellipse cx="200" cy="200" rx="58" ry="60" fill="#15140f" opacity="1"/>
+      <!-- ушанка -->
+      <path d="M128 196 Q126 118 200 112 Q276 118 272 196 L262 196 Q254 150 200 148 Q146 150 138 196 Z" fill="#2a241f"/>
+      <rect x="126" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <rect x="250" y="186" width="24" height="70" rx="10" fill="#2a241f"/>
+      <path d="M132 150 Q200 128 268 150" stroke="#3a322b" stroke-width="16" fill="none" stroke-linecap="round"/>
+      
+      <!-- глаза-блики -->
+      <ellipse cx="176" cy="200" rx="7" ry="5" fill="#f0e6c2"/>
+      <ellipse cx="224" cy="200" rx="7" ry="5" fill="#f0e6c2"/>
+      <!-- улыбка -->
+      <path d="M152 236 Q200 276 248 236 Q200 254 152 236 Z" fill="#efe7d0"/>
+      <path d="M152 236 Q200 276 248 236" stroke="#2a1f18" stroke-width="2.5" fill="none"/>
+      <path d="M164 240 L164 258" stroke="#2a1f18" stroke-width="2"/><path d="M176 240 L176 258" stroke="#2a1f18" stroke-width="2"/><path d="M188 240 L188 258" stroke="#2a1f18" stroke-width="2"/><path d="M200 240 L200 258" stroke="#2a1f18" stroke-width="2"/><path d="M212 240 L212 258" stroke="#2a1f18" stroke-width="2"/><path d="M224 240 L224 258" stroke="#2a1f18" stroke-width="2"/><path d="M236 240 L236 258" stroke="#2a1f18" stroke-width="2"/>
+    </g>
+  </g></svg><text x="1830" y="2245" text-anchor="middle" font-family="DejaVu Sans" font-weight="normal" font-size="26" fill="#9aa3b8">силуэт</text></svg>
