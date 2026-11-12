@@ -30,7 +30,11 @@ def sky(id_, top, bot):
 
 def save(name, s):
     p=f"{OUT}/{name}.svg"; open(p,"w").write(s)
-    subprocess.run(["rsvg-convert","-w",str(W),"-h",str(H),p,"-o",f"{OUT}/{name}.png"],check=True)
+    import shutil
+    if shutil.which("rsvg-convert"):
+        subprocess.run(["rsvg-convert","-w",str(W),"-h",str(H),p,"-o",f"{OUT}/{name}.png"],check=True)
+    else:  # pip install cairosvg
+        import cairosvg; cairosvg.svg2png(url=p, write_to=f"{OUT}/{name}.png", output_width=W, output_height=H)
     os.remove(p)
 
 def person(x,y,s=1,col="#4a4f5c",head="#e8c4a6",flip=False,arm_up=False):

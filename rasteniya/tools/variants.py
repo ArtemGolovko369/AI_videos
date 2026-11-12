@@ -22,3 +22,6 @@ patched("s13","B",[("filter=\"url(#glow)\"/>\n","/>\n")] if False else [("stroke
 nocurtain=[("b+='<path d=\"M60,200 h560","b+='<!--'+'<path d=\"M60,200 h560"),("<rect x=\"40\" y=\"190\" width=\"1000\" height=\"24\" rx=\"12\" fill=\"#5c5753\"/>'","<rect x=\"40\" y=\"190\" width=\"1000\" height=\"24\" rx=\"12\" fill=\"#5c5753\"/>-->'"),("for x in range(110,600,90): b+=","for x in range(0): b+=")]
 patched("s15","B",nocurtain)
 patched("s15","A",nocurtain+[("b+='<circle cx=\"740\" cy=\"960\" r=\"150\"","b+='<!--'+'<circle cx=\"740\" cy=\"960\" r=\"150\""),("for i in range(14):","b+='-->'\n    for i in range(0):")])
+# 11a: pharmacy — empty shelves, sign АПТЕКА with faded cross, no queue
+patched("s06","C",[('font-size="54" fill="#8a7f6e">ХЛЕБ</text>','font-size="54" fill="#8a7f6e">АПТЕКА</text><rect x="330" y="160" width="64" height="20" fill="#7d8f80"/><rect x="352" y="138" width="20" height="64" fill="#7d8f80"/>'),
+    ('fill="#d9b27a" opacity=".6"','fill="#e9e6df" opacity=".9"'),("for i in range(9):","for i in range(0):")])
