@@ -368,7 +368,7 @@ def s16():
     for i in range(60): b+=f'<circle cx="{random.randint(0,W)}" cy="{random.randint(0,H)}" r="{random.uniform(1,3.5):.1f}" fill="#d8cbb8" opacity="{random.uniform(.15,.5):.2f}"/>'
     b+='<text x="540" y="820" text-anchor="middle" font-family="DejaVu Serif" font-weight="bold" font-size="92" fill="#e9e4da">ЧТО ЕСЛИ…</text>'
     b+='<text x="540" y="960" text-anchor="middle" font-family="DejaVu Serif" font-weight="bold" font-size="84" fill="#e9e4da">ИСЧЕЗНУТ</text>'
-    b+='<text x="540" y="1090" text-anchor="middle" font-family="DejaVu Serif" font-weight="bold" font-size="84" fill="#e9e4da">РАСТЕНИ<tspan fill="#6cc463" filter="url(#glow)">Я</tspan></text>'
+    b+='<text x="540" y="1090" text-anchor="middle" font-family="DejaVu Serif" font-weight="bold" font-size="84" fill="#6cc463" filter="url(#glow)">РАСТЕНИЯ</text>'
     b+='<line x1="380" y1="1160" x2="700" y2="1160" stroke="#6b665e" stroke-width="3"/>'
     b+='<text x="540" y="1260" text-anchor="middle" font-family="DejaVu Sans" font-size="38" fill="#b9b2a6">Что бы ты сделал</text>'
     b+='<text x="540" y="1312" text-anchor="middle" font-family="DejaVu Sans" font-size="38" fill="#b9b2a6">с последним растением на Земле?</text>'
