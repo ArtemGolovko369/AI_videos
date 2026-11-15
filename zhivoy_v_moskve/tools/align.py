@@ -1,7 +1,7 @@
 """Выравнивание текста озвучки по паузам (без ASR): ffmpeg silencedetect + DP.
 Результат: audio/words.json — [[start, end, word], ...]"""
-import re, subprocess, json, os
-HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, "..")
+import re, subprocess, json, os, sys
+HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..")
 AUD = os.path.join(ROOT, "audio/voice.mp3")
 TEXT = open(os.path.join(ROOT, "audio/voice.txt")).read()
 
