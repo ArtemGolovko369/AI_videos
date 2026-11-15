@@ -15,7 +15,7 @@ COAT = "#6b6e72"
 HER_SKIN = "#b2b5ad"
 
 # ---------------------------------------------------------------- она
-def her(x, y, s=1, eyes="empty", mouth="flat", look=0, back=False):
+def her(x, y, s=1, eyes="empty", mouth="flat", look=0, back=False, scarf=True):
     hair = "#2a2628"
     g = body(x, y + 70*s, s, COAT)
     g += f'<rect x="{x-14*s}" y="{y+40*s}" width="{28*s}" height="{40*s}" fill="{HER_SKIN}"/>'
@@ -26,6 +26,7 @@ def her(x, y, s=1, eyes="empty", mouth="flat", look=0, back=False):
     else:
         g += head(x, y, 62*s, HER_SKIN, hair, eyes, mouth, look=look)
         g += f'<path d="M{x-66*s},{y-10*s} q{10*s},{-70*s} {66*s},{-68*s} q{56*s},0 {66*s},{68*s} q{-30*s},{-40*s} {-60*s},{-34*s} q{-20*s},{20*s} {-72*s},{34*s}z" fill="{hair}"/>'
+    if not scarf: return g
     # красный шарф
     g += f'<path d="M{x-70*s},{y+70*s} q{70*s},{40*s} {140*s},0 v{34*s} q{-70*s},{40*s} {-140*s},0z" fill="{SCARF}"/>'
     g += f'<path d="M{x+30*s},{y+100*s} l{14*s},{110*s} h{34*s} l{-10*s},{-112*s}z" fill="#b13c33"/>'
