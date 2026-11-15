@@ -189,7 +189,7 @@ def build_audio(out):
     vera_env = np.array([np.sqrt(np.mean(vv[k*hop:(k+1)*hop]**2)) for k in range(n//hop)])
     def lowpass(x, k): return np.convolve(x, np.ones(k)/k, "same").astype(np.float32)
     # музыка
-    m = np.resize(music, n).astype(np.float32); q = 10**(-18/20)
+    m = np.resize(music, n).astype(np.float32); q = 10**(-27/20)   # музыка тише голоса (было −18)
     env = np.full(n, q, np.float32); env[:SR] = np.linspace(0, q, SR)
     def ramp(t0, t1, g0, g1): i0, i1 = int(t0*SR), int(t1*SR); env[i0:i1] = np.linspace(g0, g1, i1-i0)
     ramp(NARR_END + .3, NARR_END + .6, q, 0); env[int((NARR_END+.6)*SR):int(TITLE_T*SR)] = 0
@@ -242,7 +242,12 @@ def build_audio(out):
         buzz(tk, .22); tk += gap; gap = max(.25, gap*.85)
     # мигание лампы — потрескивание
     for a in (1.0, 1.35, 1.5, 3.4): add(NARR_END + .6 + a, noise(.1, 2)*.18)
-    mix = np.clip((v + vv*0.95 + m + sfx*.9)[:int(TOTAL*SR)], -1, 1)
+    # приглушение фона под голосом: −6 дБ, атака/отпускание ~0,25 с
+    speech = v + vv*0.95
+    act = (np.convolve(np.abs(speech), np.ones(SR//10)/(SR//10), "same") > 0.02).astype(np.float32)
+    act = np.convolve(act, np.ones(SR//4)/(SR//4), "same")
+    duck = 1 - 0.5*act
+    mix = np.clip((speech + (m + sfx*.3)*duck)[:int(TOTAL*SR)], -1, 1)   # шумы −9,5 дБ (было ×0.9)
     tmp = P("out", "_mix.f32"); mix.astype(np.float32).tofile(tmp)
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", tmp,
                     "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-ar", str(SR), "-ac", "2", out], check=True)
