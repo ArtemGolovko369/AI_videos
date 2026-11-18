@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — маяк</title>
+<link rel="stylesheet" href="fonts/pf.css">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0b1424; }
+  svg { position: absolute; left: 0; top: 0; }
+  #lyr { position: absolute; left: 40px; width: 880px; top: 220px; height: 360px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; text-align: center;
+         font-family: 'Playfair Display', serif; font-weight: 700; line-height: 1.12; color: #f4efe6; }
+  .w { display: inline-block; margin: 0 16px; white-space: nowrap; }
+  #flash { position: absolute; inset: 0; background: #e8f0ff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #0b1424; opacity: 0; }
+</style>
+</head>
+<body>
+<svg width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="skyN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070d1a"/><stop offset=".6" stop-color="#15223a"/><stop offset="1" stop-color="#2a3a57"/></linearGradient>
+    <linearGradient id="skyD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3f78"/><stop offset=".45" stop-color="#c46f8a"/><stop offset=".8" stop-color="#ffb070"/><stop offset="1" stop-color="#ffd9a0"/></linearGradient>
+    <linearGradient id="beamG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff3c4" stop-opacity=".85"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></linearGradient>
+    <radialGradient id="lampG"><stop offset="0" stop-color="#fffbe6"/><stop offset=".3" stop-color="#ffe08a" stop-opacity=".9"/><stop offset="1" stop-color="#ffb84a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sunG"><stop offset="0" stop-color="#fff6d8"/><stop offset=".25" stop-color="#ffd27a" stop-opacity=".9"/><stop offset="1" stop-color="#ff9a5a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="75%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".55"/></radialGradient>
+    <filter id="b30"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="b8"><feGaussianBlur stdDeviation="8"/></filter>
+    <filter id="grain"><feTurbulence id="gt" type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="2"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .07 0"/></filter>
+  </defs>
+  <g id="scene"></g>
+  <rect width="1080" height="1920" fill="url(#vig)"/>
+  <rect width="1080" height="1920" filter="url(#grain)"/>
+</svg>
+<div id="lyr"></div>
+<div id="flash"></div>
+<div id="fade"></div>
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const smooth = (a, b, t) => { const x = prog(t, a, b); return x * x * (3 - 2 * x); };
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+const hx = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
+const mix = (a, b, x) => { const A = hx(a), B = hx(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], x))).join(',')})`; };
+window.ready = document.fonts.load('700 100px "Playfair Display"', 'Было тяжело').then(() => document.fonts.ready);
+
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+
+const HOR = 1170;              // horizon
+const LAMP = [835, 700];       // lighthouse lamp
+const storm = t => lerp(1, .12, smooth(6.2, 10, t)) * (t < 1 ? lerp(.7, 1, t) : 1);
+const dawnF = t => smooth(11.6, 13.4, t);
+const lit = t => t >= 6.2;
+
+// ---------- waves ----------
+const LAYERS = Array.from({ length: 7 }, (_, i) => ({ base: HOR + 20 + i * i * 14 + i * 40, A: 6 + i * 9, k: .012 - i * .0011, w: 1.4 + i * .25, ph: i * 1.7 }));
+function waveY(L, x, t) { const s = storm(t); return L.base + L.A * s * (Math.sin(L.k * x + L.w * t + L.ph) + .5 * Math.sin(2.3 * L.k * x - 1.3 * L.w * t + L.ph * 2)) + L.A * .25 * Math.sin(.04 * x + t * 3); }
+function boatState(t) {
+  const L = LAYERS[4];
+  const mv = easeIO(prog(t, 8.3, 13.2));
+  const x = lerp(250, 560, mv);
+  const layerY = waveY(L, x, t), slope = (waveY(L, x + 20, t) - waveY(L, x - 20, t)) / 40;
+  const y = lerp(layerY, lerp(layerY, HOR + 120, .7), mv);
+  return { x, y, ang: Math.atan(slope) * 180 / Math.PI * (1 - mv * .5), s: lerp(1, .62, mv) };
+}
+const CLOUDS = Array.from({ length: 9 }, (_, i) => { const r = rng(i + 60); return { x: r() * 1500 - 200, y: 640 + r() * 480, w: 300 + r() * 380, h: 70 + r() * 70, v: 30 + r() * 50 }; });
+const RAIN = Array.from({ length: 120 }, (_, i) => { const r = rng(i + 100); return { x: r() * 1500 - 200, y: r() * 2000, v: 1800 + r() * 900, l: 50 + r() * 60 }; });
+const STARS = Array.from({ length: 70 }, (_, i) => { const r = rng(i + 400); return { x: r() * 1080, y: 100 + r() * 950, r: 1 + r() * 2.2, p: r() * 6 }; });
+const GLINT = Array.from({ length: 160 }, (_, i) => { const r = rng(i + 800); return { u: r(), off: (r() - .5), w: 10 + r() * 34, p: r() * 6 }; });
+
+function render(t) {
+  const st = storm(t), dw = dawnF(t);
+  const bs = boatState(t);
+  let h = '';
+  // sky
+  h += `<rect width="1080" height="${HOR + 10}" fill="url(#skyN)"/>`;
+  h += `<rect width="1080" height="${HOR + 10}" fill="url(#skyD)" opacity="${dw.toFixed(3)}"/>`;
+  // stars after storm
+  const sv = smooth(8.5, 10.5, t) * (1 - dw);
+  if (sv > 0) for (const s of STARS) h += `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="#fff" opacity="${(sv * (.5 + .5 * Math.sin(t * 3 + s.p))).toFixed(2)}"/>`;
+  // sun at dawn
+  if (t > 12.2) { const sy = lerp(HOR + 60, HOR - 110, easeOut(prog(t, 12.3, 14))); h += `<circle cx="380" cy="${sy}" r="420" fill="url(#sunG)" opacity="${dw}"/><circle cx="380" cy="${sy}" r="96" fill="#fff1c9"/>`; }
+  // clouds
+  for (const c of CLOUDS) { const x = ((c.x + t * c.v * (st + .3)) % 1700) - 300; const op = lerp(.25, .9, st) * (1 - dw * .6);
+    h += `<g filter="url(#b30)" opacity="${op.toFixed(2)}"><ellipse cx="${x}" cy="${c.y}" rx="${c.w / 2}" ry="${c.h}" fill="${dw > .3 ? mix('1d2638', 'f2a07e', dw) : '#1d2638'}"/><ellipse cx="${x + c.w * .2}" cy="${c.y - c.h * .6}" rx="${c.w / 3}" ry="${c.h}" fill="${dw > .3 ? mix('243049', 'f7b98f', dw) : '#243049'}"/></g>`; }
+  // lightning
+  const bolts = [[.9, 300, 1], [4.15, 620, 2]];
+  for (const [bt, bx, sd] of bolts) if (t >= bt && t < bt + .25) { const R = rng(sd); let x = bx, y = 560, d = `M${x} ${y}`; while (y < HOR) { x += (R() - .5) * 90; y += 40 + R() * 50; d += ` L${x.toFixed(0)} ${Math.min(y, HOR)}`; }
+    const o = 1 - prog(t, bt, bt + .25); h += `<path d="${d}" stroke="#e8f0ff" stroke-width="7" fill="none" opacity="${o}"/><path d="${d}" stroke="#a9c4ff" stroke-width="26" fill="none" opacity="${o * .35}" filter="url(#b8)"/>`; }
+  // cliff + lighthouse
+  const rock = dw > 0 ? mix('0c111c', '3a2a3a', dw) : '#0c111c';
+  h += `<path d="M640 ${HOR + 40} L700 1010 L760 980 L800 1000 L860 960 L920 990 L990 1010 L1080 1000 L1080 ${HOR + 60} Z" fill="${rock}"/>`;
+  h += `<path d="M790 1000 L805 760 L865 760 L880 1000 Z" fill="${dw > 0 ? mix('d7d9df', 'f4d7c6', dw) : '#7d8596'}"/>`;
+  h += `<path d="M796 905 L874 905 L878 945 L792 945 Z M800 830 L870 830 L873 860 L797 860 Z" fill="${dw > 0 ? mix('b8323f', 'c4495a', dw) : '#5b2a33'}"/>`;
+  h += `<rect x="798" y="${LAMP[1] + 20}" width="74" height="42" rx="6" fill="#2a2f3c"/><rect x="808" y="${LAMP[1] - 26}" width="54" height="50" rx="8" fill="${lit(t) ? '#ffe7a0' : '#38404f'}"/><path d="M800 ${LAMP[1] - 26} L835 ${LAMP[1] - 66} L870 ${LAMP[1] - 26} Z" fill="#2a2f3c"/>`;
+  // beam + lamp glow
+  if (lit(t)) {
+    const on = spring(t - 6.2, 0, 8, 12);
+    const toBoat = Math.atan2(bs.y - 40 - LAMP[1], bs.x - LAMP[0]) * 180 / Math.PI;
+    let ang = t < 6.95 ? lerp(-30, 220, easeOut(prog(t, 6.2, 6.95))) : 220 + (toBoat + 360 - 220) * 0 ; // sweep then lock
+    if (t >= 6.95) ang = lerp(220, toBoat + 360 * (toBoat < 0 ? 1 : 0), easeIO(prog(t, 6.95, 7.6)));
+    const fadeB = 1 - dw * .85;
+    h += `<g transform="translate(${LAMP[0]} ${LAMP[1]}) rotate(${ang})" opacity="${(on * fadeB).toFixed(3)}"><path d="M0 -12 L1500 -190 L1500 190 L0 12 Z" fill="url(#beamG)" filter="url(#b8)"/></g>`;
+    h += `<circle cx="${LAMP[0]}" cy="${LAMP[1]}" r="${180 * clamp(on)}" fill="url(#lampG)"/>`;
+  }
+  // light path on water (from lighthouse toward boat), later sun path
+  const pathP = lit(t) ? easeOut(prog(t, 6.4, 8.2)) : 0;
+  // sea layers
+  for (let i = 0; i < LAYERS.length; i++) {
+    const L = LAYERS[i]; let d = `M-40 1920 L-40 ${waveY(L, -40, t).toFixed(1)}`;
+    for (let x = -40; x <= 1120; x += 16) d += ` L${x} ${waveY(L, x, t).toFixed(1)}`;
+    d += ' L1120 1920 Z';
+    const night = mix('1b2a45', '0a1220', i / 6), day = mix('c98a8a', '3b3f6a', i / 6);
+    h += `<path d="${d}" fill="${dw > 0 ? mix(night.replace(/rgb\(|\)/g, '').split(',').map(v => (+v).toString(16).padStart(2, '0')).join(''), day.replace(/rgb\(|\)/g, '').split(',').map(v => (+v).toString(16).padStart(2, '0')).join(''), dw) : night}"/>`;
+    // foam on crests
+    if (st > .2) { let f = ''; for (let x = -40; x <= 1120; x += 16) { const y = waveY(L, x, t), y2 = waveY(L, x + 16, t); if (y < L.base - L.A * st * .7) f += `M${x} ${y.toFixed(1)} L${x + 16} ${y2.toFixed(1)} `; }
+      if (f) h += `<path d="${f}" stroke="#cfe0f5" stroke-width="${3 + i}" opacity="${(.5 * st).toFixed(2)}" fill="none" stroke-linecap="round"/>`; }
+    // glints for the light path, drawn on layer 2 and above
+    if (i === 3 && (pathP > 0 || dw > 0)) {
+      let g = '';
+      const sx = dw > .5 ? 380 : LAMP[0], sy = HOR + 10, tx = bs.x, ty = bs.y + 20;
+      for (const q of GLINT) { if (q.u > pathP && dw < .5) continue; const ey = dw > .5 ? lerp(ty, 1750, dw) : ty, ex = dw > .5 ? lerp(tx, 380, dw) : tx; const y = lerp(sy, ey, q.u), x = lerp(sx, ex, q.u) + q.off * lerp(30, 160, q.u);
+        const fl = .4 + .6 * Math.abs(Math.sin(t * 6 + q.p)); g += `<rect x="${x - q.w / 2}" y="${y}" width="${q.w * lerp(.6, 2, q.u)}" height="${3 + 4 * q.u}" rx="2" fill="${dw > .5 ? '#ffe0a0' : '#fff2c0'}" opacity="${(fl * .85).toFixed(2)}"/>`; }
+      h += g;
+    }
+    // boat sits in layer 4
+    if (i === 4) {
+      const sail = lit(t) ? mix('d9d4c8', 'fff4dc', clamp((t - 6.2) * 2)) : '#7b8191';
+      h += `<g transform="translate(${bs.x} ${bs.y}) rotate(${bs.ang}) scale(${bs.s})">
+        <path d="M-90 -6 L90 -6 L66 30 L-64 30 Z" fill="#3a2a22"/><path d="M-90 -6 L90 -6" stroke="#6b4a3a" stroke-width="6"/>
+        <path d="M0 -6 L0 -200" stroke="#2b2420" stroke-width="7"/>
+        <path d="M6 -192 Q 70 -110 74 -16 L6 -16 Z" fill="${sail}"/><path d="M-6 -170 Q -50 -100 -62 -18 L-6 -18 Z" fill="${sail}" opacity=".85"/>
+        ${lit(t) ? `<circle cx="0" cy="-206" r="7" fill="#ffd27a"/>` : ''}</g>`;
+    }
+  }
+  // rain
+  const ra = 1 - smooth(6.2, 7.4, t);
+  if (ra > 0) { let r = ''; for (const d of RAIN) { const y = ((d.y + t * d.v) % 2100) - 100, x = d.x - ((t * d.v * .25) % 400); r += `M${x.toFixed(0)} ${y.toFixed(0)} l-14 ${d.l.toFixed(0)} `; }
+    h += `<path d="${r}" stroke="#a9bbd6" stroke-width="2.5" opacity="${(.35 * ra).toFixed(2)}"/>`; }
+  // birds at dawn
+  if (t > 12.6) { const x = t - 12.6; for (let k = 0; k < 3; k++) { const bx = 200 + k * 80 + x * 90, by = 860 - k * 30 + Math.sin(x * 4 + k) * 8, f = Math.sin(t * 12 + k) * 10;
+    h += `<path d="M${bx - 22} ${by + f} Q${bx - 10} ${by - 6} ${bx} ${by} Q${bx + 10} ${by - 6} ${bx + 22} ${by + f}" stroke="#3a2a3a" stroke-width="4" fill="none" stroke-linecap="round"/>`; } }
+
+  // camera roll in storm
+  const roll = Math.sin(t * 1.3) * 1.6 * st, zoom = 1.04 + .03 * Math.sin(t * .4) + .05 * smooth(12.4, 14, t);
+  let sh = 0; if (t > .9 && t < 1.15) sh = 14; if (t > 4.15 && t < 4.4) sh = 18;
+  const sx = sh ? (hash(t * 30) - .5) * sh : 0, sy = sh ? (hash(t * 30 + 4) - .5) * sh : 0;
+  $('scene').setAttribute('transform', `translate(${540 + sx} ${1100 + sy}) rotate(${roll}) scale(${zoom}) translate(-540 -1100)`);
+  $('scene').innerHTML = h;
+  $('gt').setAttribute('seed', 1 + Math.floor(t * 15) % 30);
+
+  // lyrics
+  let li = 0; for (let i = 0; i < 7; i++) if (t >= LB[i]) li = i;
+  const lineIn = prog(t, LB[li], LB[li] + .22);
+  let s = '';
+  for (const [w, s0, e0, k] of LINES[li].w) {
+    const x = t - s0, on = x >= 0, cur = on && t < e0 + .05;
+    const size = k === 'big' ? 160 : 124;
+    const op = on ? (cur ? 1 : .85) : .22, ty = on ? lerp(24, 0, easeOut(clamp(x / .25))) : 0, sc = on && k ? spring(x, .85, 9, 14) : 1;
+    const warm = lit(t);
+    const color = cur && k ? (warm ? '#ffcf73' : '#a9c4ff') : '#f4efe6';
+    const glow = cur && k ? (warm ? '0 0 34px rgba(255,200,100,.8), 0 4px 18px rgba(0,0,0,.6)' : '0 0 30px rgba(150,180,255,.7), 0 4px 18px rgba(0,0,0,.6)') : '0 4px 18px rgba(0,0,0,.65)';
+    s += `<span class="w" style="font-size:${size}px;opacity:${(op * lineIn).toFixed(3)};color:${color};text-shadow:${glow};transform:translateY(${ty.toFixed(1)}px) scale(${sc.toFixed(3)});${cur && k === 'big' ? 'font-style:italic' : ''}">${w}</span>`;
+  }
+  $('lyr').innerHTML = s;
+  let fl = 0;
+  for (const bt of [.9, 4.15]) if (t >= bt) fl = Math.max(fl, .55 * Math.max(0, 1 - (t - bt) / .18) * (Math.floor((t - bt) * 30) % 2 ? .5 : 1));
+  if (t >= 6.2) fl = Math.max(fl, .35 * Math.max(0, 1 - (t - 6.2) / .2));
+  if (t >= 12.45) fl = Math.max(fl, .3 * Math.max(0, 1 - (t - 12.45) / .3));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
