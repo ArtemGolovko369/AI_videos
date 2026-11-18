@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — типографика</title>
+<link rel="stylesheet" href="fonts/unb.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #121212; }
+  body { font-family: 'Unbounded', sans-serif; font-weight: 800; }
+  #bg { position: absolute; inset: 0; }
+  #stage { position: absolute; inset: 0; transform-origin: 480px 1000px; }
+  .L { position: absolute; line-height: 1; white-space: pre; transform-origin: 50% 85%; }
+  #road { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 480px 760px; overflow: hidden; }
+  #plane { position: absolute; left: -220px; width: 1400px; height: 9000px; bottom: -300px; transform-origin: 50% 100%; transform: rotateX(66deg); }
+  #grain { position: absolute; inset: 0; opacity: .09; pointer-events: none; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #0a0a0a; opacity: 0; }
+  #meas { position: absolute; left: -9999px; top: 0; line-height: 1; white-space: pre; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="road"><div id="plane"></div></div>
+<div id="stage"></div>
+<svg id="grain" width="1080" height="1920"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="4"/></filter><rect width="1080" height="1920" filter="url(#n)"/></svg>
+<div id="flash"></div>
+<div id="fade"></div>
+<span id="meas"></span>
+
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIn = x => x * x * x;
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const spring = (x, from = 0, k = 9, w = 16) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+
+const DARK = '#121212', CREAM = '#f4efe6', ACC = '#ff4d2e', TXT = '#f2efe8';
+const CX = 480;
+
+// ---------- measuring ----------
+const MC = {};
+function meas(s, size) { const k = s + '|' + size; if (k in MC) return MC[k]; const m = $('meas'); m.style.fontSize = size + 'px'; m.textContent = s; return MC[k] = m.getBoundingClientRect().width; }
+// letters of a word: returns [{ch, x(left), w}] relative to word left
+function letters(word, size) { const out = []; for (let i = 0; i < word.length; i++) { const x = meas(word.slice(0, i), size), x2 = meas(word.slice(0, i + 1), size); out.push({ ch: word[i], x, w: x2 - x, i }); } return out; }
+window.ready = document.fonts.load('800 100px Unbounded', 'Было тяжело').then(() => document.fonts.ready);
+
+// one letter span; y = bottom of glyph box
+function L(ch, x, y, size, o = {}) {
+  const { dx = 0, dy = 0, rot = 0, sx = 1, sy = 1, op = 1, c = TXT, clip = '', shadow = '' } = o;
+  if (op <= 0.001) return '';
+  return `<div class="L" style="left:${x.toFixed(1)}px;top:${(y - size).toFixed(1)}px;font-size:${size}px;color:${c};opacity:${op.toFixed(3)};transform:translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${rot.toFixed(2)}deg) scale(${sx.toFixed(3)},${sy.toFixed(3)});${clip ? 'clip-path:' + clip + ';' : ''}${shadow ? 'text-shadow:' + shadow + ';' : ''}">${ch}</div>`;
+}
+// word with per-letter function; align: center at cx / left at x / right ending at x
+function W(word, size, x, y, align, fn) {
+  const tw = meas(word, size), x0 = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
+  return letters(word, size).map((l, i, a) => L(l.ch, x0 + l.x, y, size, fn ? fn(i, a.length, x0 + l.x + l.w / 2) : {})).join('');
+}
+const rise = (t, s, i, st = .04) => { const x = t - s - i * st; return { dy: x <= 0 ? 60 : lerp(60, 0, easeOut(clamp(x / .22))), op: clamp(x / .12) }; };
+
+// ---------- S1: Было тяжело ----------
+function S1(t) {
+  let h = '';
+  const press = t > .95 ? 30 * spring(t - .95, 0, 7, 14) + 20 * prog(t, 1.2, 2.1) : 0;
+  h += W('Было', 150, CX, 760, 'center', (i) => { const r = rise(t, .48, i); r.dy += press; return r; });
+  const sink = prog(t, 1.15, 2.1);
+  h += W('тяжело', 200, CX, 1100, 'center', (i, n) => {
+    const s = .9 + i * .035, x = t - s; if (x < 0) return { op: 0 };
+    const fall = .16, land = x - fall;
+    const dy = land < 0 ? -900 * (1 - easeIn(x / fall)) : 0;
+    const sq = land < 0 ? 1 : 1 - .32 * Math.exp(-9 * land) * Math.cos(18 * land);
+    return { dy, sy: sq * lerp(1, .78, sink), sx: (2 - sq) * lerp(1, 1.08, sink), c: TXT };
+  });
+  // dust
+  if (t > .95 && t < 1.8) { const R = rng(5); for (let k = 0; k < 18; k++) { const x = t - .95 - k * .01; if (x < 0) continue;
+    const vx = (R() - .5) * 900, vy = -150 - R() * 300; const px = CX + (R() - .5) * 600 + vx * x, py = 1100 + vy * x + 900 * x * x;
+    if (py < 1150) h += `<div style="position:absolute;left:${px}px;top:${py}px;width:${10 + k % 3 * 5}px;height:${10 + k % 3 * 5}px;background:${TXT};opacity:${clamp(1 - x * 1.4)}"></div>`; } }
+  return h;
+}
+// ---------- S2: Да я знаю ----------
+function S2(t) {
+  let h = '';
+  const bx = lerp(-700, 60, easeOut(prog(t, 2.16, 2.36)));
+  const bw = meas('Было тяжело', 64) + 80;
+  h += `<div style="position:absolute;left:${bx}px;top:560px;width:${bw}px;height:130px;border-radius:40px 40px 40px 10px;background:#2a2a2a"></div>`;
+  h += W('Было тяжело', 64, bx + 40, 652, 'left', () => ({ c: '#bdbab3' }));
+  // typing dots
+  if (t > 2.2 && t < 2.3) for (let k = 0; k < 3; k++) h += `<div style="position:absolute;left:${800 + k * 40}px;top:880px;width:24px;height:24px;border-radius:50%;background:#666;opacity:${.4 + .6 * (Math.floor(t * 20 + k) % 2)}"></div>`;
+  const slide = (s, i) => { const x = t - s - i * .03; return { dx: x <= 0 ? 400 : lerp(400, 0, easeOut(clamp(x / .18))), op: clamp(x / .1) }; };
+  const wDa = meas('Да ', 160), wYa = meas('я', 160);
+  h += W('Да', 160, 910 - wDa - wYa, 1000, 'left', i => slide(2.24, i));
+  h += W('я', 160, 910 - wYa, 1000, 'left', i => slide(2.55, i));
+  h += W('знаю', 240, 910, 1280, 'right', i => { const x = t - 2.75 - i * .03; return { dx: x <= 0 ? 700 : 700 * (1 - spring(x, 0, 10, 14)), op: clamp(x / .06), c: ACC }; });
+  return h;
+}
+// ---------- S3: Было не легко ----------
+const FLOOR = 1480;
+function legkoPieces(t) {
+  // returns html of legko pieces, using physics after crack
+  const size = 250, y = 1120, tw = meas('легко', size), x0 = CX - tw / 2;
+  let h = '';
+  const ls = letters('легко', size);
+  for (const l of ls) {
+    const x = t - 4.15 - l.i * .03; if (x < 0) continue;
+    const pop = spring(x, .3, 10, 16);
+    const brk = t - 4.42;
+    if (brk < 0) { const sh = t > 4.3 ? (hash(t * 30 + l.i) - .5) * 10 : 0; h += L(l.ch, x0 + l.x, y, size, { c: TXT, sx: pop, sy: pop, dx: sh }); continue; }
+    const R = rng(40 + l.i);
+    for (const half of [0, 1]) {
+      const d = brk - half * .06 - R() * .05; const dd = Math.max(0, d);
+      const vx = (R() - .5) * 500, vy = half ? -80 : -260 - R() * 200, vr = (R() - .5) * 400;
+      let dy = vy * dd + 2600 * dd * dd, dx = vx * dd, rot = vr * dd;
+      const maxDy = FLOOR - y + (half ? 0 : size * .45) - 40 * R();
+      if (dy > maxDy) { dy = maxDy; rot = lerp(rot, (R() - .5) * 60, 1) ; }
+      const clip = half ? `inset(52% -5% -5% -5%)` : `inset(-5% -5% 48% -5%)`;
+      h += L(l.ch, x0 + l.x, y, size, { c: TXT, dx, dy, rot, clip });
+    }
+  }
+  return h;
+}
+function S3(t) {
+  let h = '';
+  const shake = t > 4.3 && t < 4.75 ? 1 : 0;
+  h += W('Было', 130, 470 - meas('Было ', 130) / 2 - meas('не', 130) / 2, 780, 'left', i => { const r = rise(t, 3.6, i); if (shake) r.dx = (hash(t * 30 + i) - .5) * 8; return r; });
+  h += W('не', 130, 470 + meas('Было ', 130) / 2 - meas('не', 130) / 2, 780, 'left', i => rise(t, 3.95, i));
+  h += legkoPieces(t);
+  // crack line
+  const cp = prog(t, 4.3, 4.4);
+  if (cp > 0 && t < 4.5) { const R = rng(3); let pts = []; for (let k = 0; k <= 10; k++) pts.push(`${120 + k * 72},${1010 + (R() - .5) * 90}`);
+    h += `<svg style="position:absolute;left:0;top:0" width="1080" height="1920"><polyline points="${pts.join(' ')}" fill="none" stroke="${ACC}" stroke-width="12" stroke-linejoin="bevel" pathLength="1" stroke-dasharray="1 2" stroke-dashoffset="${1 - cp}"/></svg>`; }
+  return h;
+}
+// ---------- S4: Понимаю но я ----------
+function S4(t) {
+  let h = '';
+  const push = easeOut(prog(t, 6.2, 6.5));
+  const away = (cx0, i) => ({ dx: (cx0 - CX >= 0 ? 1 : -1) * (300 + Math.abs(cx0 - CX)) * 2.2 * push, dy: -200 * push * (i % 2 ? 1 : -.4), rot: (cx0 - CX) * .08 * push });
+  // rubble stays from S3, then flung away
+  const rub = legkoPieces(Math.min(t, 5.4));
+  h += `<div style="position:absolute;inset:0;transform:translateY(${push * 900}px) scale(${1 + push * .5});opacity:${1 - push}">${rub}</div>`;
+  h += W('Понимаю', 140, CX, 760, 'center', (i, n, cx0) => { const r = rise(t, 4.83, i, .06); const a = away(cx0, i); return { ...r, dx: a.dx, dy: r.dy + a.dy, rot: a.rot, op: r.op }; });
+  h += W('но', 160, CX, 960, 'center', (i, n, cx0) => { const r = rise(t, 5.7, i); const a = away(cx0 + (i ? 200 : -200), i); return { ...r, dx: a.dx, dy: r.dy + a.dy, rot: a.rot }; });
+  if (t >= 6.2) { const x = t - 6.2, s = spring(x, .05, 8, 13) * (1 + .02 * Math.sin(x * 10));
+    h += W('я', 1100, CX, 1560, 'center', () => ({ sx: s, sy: s, c: DARK })); }
+  return h;
+}
+// ---------- S5/S6: road ----------
+const ROAD_V = 330;
+const camR = t => Math.max(0, t - 6.84) * ROAD_V;
+const ROADWORDS = [['Нашел', 6.92, 190, 0, 650], ['свой', 7.55, 190, 0, 1060], ['путь', 8.2, 230, 1, 1500], ['Свою', 9.45, 190, 0, 1920], ['дорогу', 10.0, 230, 1, 2360]];
+const PLANE_H = 9000;
+function roadPlane(t) {
+  const cam = camR(t);
+  let h = `<div style="position:absolute;inset:0;background:#1d1d1d"></div>
+    <div style="position:absolute;left:0;top:0;bottom:0;width:18px;background:${CREAM}"></div><div style="position:absolute;right:0;top:0;bottom:0;width:18px;background:${CREAM}"></div>`;
+  // center dashes (moving)
+  const dashCol = t > 8.2 ? ACC : '#e8e2d6';
+  for (let k = 0; k < 40; k++) { const d = k * 220 - (cam % 220); const top = PLANE_H - d - 120; if (d < -200) continue; h += `<div style="position:absolute;left:690px;width:20px;height:110px;top:${top}px;background:${dashCol}"></div>`; }
+  for (const [w, s, size, acc, slot] of ROADWORDS) {
+    if (t < s) continue;
+    const dist = slot + 300 - cam; if (dist < -700) continue;
+    const x = t - s, st = spring(x, 1.6, 10, 14), op = clamp(x / .06);
+    const tw = meas(w, size), bottom = PLANE_H - dist;
+    h += `<div style="position:absolute;left:${700 - tw / 2}px;top:${bottom - size}px;font-size:${size}px;line-height:1;color:${acc ? ACC : CREAM};opacity:${op};transform-origin:50% 100%;transform:scale(${st},${st * 1.6})">${w}</div>`;
+  }
+  return h;
+}
+// ---------- S7: Жизни своей суть ----------
+function S7(t) {
+  let h = '';
+  const col = (s, cx0, i, ty) => {
+    const r = rise(t, s, i, .03);
+    if (t < 12.45) return r;
+    const x = prog(t, 12.45, 12.62), e = easeIn(x);
+    return { dx: (CX - cx0) * e, dy: (1150 - ty) * e + r.dy, sx: 1 - e, sy: 1 - e, op: 1 - x * .5, rot: 0 };
+  };
+  h += W('Жизни', 170, CX, 760, 'center', (i, n, cx0) => col(11.65, cx0, i, 760));
+  h += W('своей', 170, CX, 960, 'center', (i, n, cx0) => col(12.05, cx0, i, 960));
+  if (t >= 12.55) { const x = t - 12.55, s = spring(x, .2, 7, 12) * (1 + .03 * easeOut(prog(t, 12.9, 14)));
+    h += `<div style="position:absolute;inset:0;transform-origin:${CX}px 1150px;transform:scale(${s})">` + W('суть', 300, CX, 1250, 'center', () => ({ c: ACC, shadow: `0 0 ${60 + 30 * Math.sin(x * 6)}px rgba(255,77,46,.7)` })) + '</div>';
+    const rr = easeOut(clamp(x / .6)) * 1100;
+    h += `<div style="position:absolute;left:${CX - rr / 2}px;top:${1100 - rr / 2}px;width:${rr}px;height:${rr}px;border-radius:50%;border:${Math.max(0, 18 * (1 - x / .6))}px solid ${ACC};opacity:${1 - clamp(x / .6)}"></div>`;
+  }
+  return h;
+}
+
+// ---------- main ----------
+function render(t) {
+  let bg = DARK, stage = '', road = false;
+  if (t < 2.16) stage = S1(t);
+  else if (t < 3.52) stage = S2(t);
+  else if (t < 4.75) stage = S3(t);
+  else if (t < 6.84) { stage = S4(t); if (t >= 6.2) bg = ACC; }
+  else if (t < 11.57) { road = true; bg = CREAM; }
+  else stage = S7(t);
+  // wipes
+  let wipe = '';
+  if (t >= 6.84 && t < 7.05) { const p = easeOut(prog(t, 6.84, 7.05)); wipe = `<div style="position:absolute;left:0;right:0;bottom:0;height:${p * 1920}px;background:${CREAM}"></div>`; bg = ACC; road = p > .99; if (!road) stage = S4(6.83); }
+  if (t >= 11.57 && t < 11.75) { const p = easeOut(prog(t, 11.57, 11.75)); wipe = `<div style="position:absolute;left:0;right:0;top:0;height:${p * 1920}px;background:${DARK}"></div>`; bg = CREAM; road = true; }
+  $('bg').style.background = bg;
+  $('road').style.display = road ? 'block' : 'none';
+  if (road) {
+    $('plane').innerHTML = roadPlane(t);
+    // sun at horizon
+    const sun = prog(t, 9.4, 11.4);
+    $('road').style.background = sun > 0 ? `radial-gradient(circle at 480px ${lerp(860, 700, sun)}px, ${ACC} 0 ${lerp(0, 150, easeOut(sun))}px, transparent ${lerp(0, 152, easeOut(sun))}px)` : 'none';
+  }
+  $('stage').innerHTML = stage + wipe;
+  // shake
+  let sh = 0;
+  if (t > .95 && t < 1.25) sh = 22 * (1 - prog(t, .95, 1.25));
+  if (t > 4.42 && t < 4.65) sh = 16;
+  if (t > 6.2 && t < 6.45) sh = 26 * (1 - prog(t, 6.2, 6.45));
+  if (t > 12.55 && t < 12.8) sh = 20 * (1 - prog(t, 12.55, 12.8));
+  const sx = sh ? (hash(t * 30) - .5) * sh : 0, sy = sh ? (hash(t * 30 + 9) - .5) * sh : 0;
+  $('stage').style.transform = `translate(${sx}px,${sy}px)`;
+  $('grain').querySelector('feTurbulence').setAttribute('seed', 1 + Math.floor(t * 15) % 30);
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .8 * Math.max(0, 1 - (t - 6.2) / .15));
+  if (t >= 12.55) fl = Math.max(fl, .85 * Math.max(0, 1 - (t - 12.55) / .25));
+  if (t >= 8.2) fl = Math.max(fl, .3 * Math.max(0, 1 - (t - 8.2) / .1));
+  if (t >= 10.0) fl = Math.max(fl, .3 * Math.max(0, 1 - (t - 10.0) / .1));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
