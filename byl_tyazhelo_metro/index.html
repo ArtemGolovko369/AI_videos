@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — линия</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #ebe9e4; }
+  body { font-family: 'Inter', sans-serif; }
+  svg#map { position: absolute; left: 0; top: 0; }
+  #sign { position: absolute; left: 40px; width: 880px; top: 200px; height: 340px; border-radius: 36px; background: #16224a;
+          box-shadow: 0 24px 60px rgba(22,34,74,.35); overflow: hidden; }
+  #cap { position: absolute; left: 44px; top: 34px; font-size: 34px; font-weight: 600; color: #9aa6c8; display: flex; align-items: center; gap: 18px; letter-spacing: .5px; }
+  #dot { width: 30px; height: 30px; border-radius: 50%; }
+  #line { position: absolute; left: 30px; right: 30px; top: 96px; bottom: 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; align-content: center;
+          font-weight: 800; line-height: 1.1; color: #fff; }
+  .w { display: inline-block; margin: 0 14px; white-space: nowrap; }
+  #bar { position: absolute; left: 0; bottom: 0; height: 12px; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #16224a; opacity: 0; }
+</style>
+</head>
+<body>
+<svg id="map" width="1080" height="1920" viewBox="0 0 1080 1920"><g id="world"></g></svg>
+<div id="sign"><div id="cap"><div id="dot"></div><span id="capt"></span></div><div id="line"></div><div id="bar"></div></div>
+<div id="flash"></div>
+<div id="fade"></div>
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const smooth = (a, b, t) => { const x = prog(t, a, b); return x * x * (3 - 2 * x); };
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+const hx = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
+const mix = (a, b, x) => { const A = hx(a), B = hx(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], x))).join(',')})`; };
+window.ready = document.fonts.ready;
+
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+
+const OLD = '#8a909b', NEW = '#12b05a', RED = '#e8453c';
+// ---------- geometry ----------
+const plen = pts => pts.reduce((s, p, i) => i ? s + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0, 0);
+function along(pts, d) {
+  for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (d <= l || i === pts.length - 1) { const x = clamp(d / l); return [lerp(a[0], b[0], x), lerp(a[1], b[1], x), Math.atan2(b[1] - a[1], b[0] - a[0])]; } d -= l; }
+}
+const poly = pts => 'M' + pts.map(p => p.join(' ')).join(' L');
+const OLDLINE = [[-200, 1300], [1080, 1300]];
+const NEWLINE = [[1080, 1300], [1080, 1100], [1280, 900], [1280, 650], [1480, 450], [1480, 330], [1600, 210]];
+const NEWLEN = plen(NEWLINE);
+const RUNS = [
+  { pts: [[90, 1300], [330, 1300]], a: .25, b: .9 },
+  { pts: [[330, 1300], [600, 1300]], a: 2.24, b: 2.75 },
+  { pts: [[600, 1300], [870, 1300]], a: 3.6, b: 4.15 },
+  { pts: [[870, 1300], [1080, 1300]], a: 6.22, b: 6.75 },
+  { pts: NEWLINE.slice(0, 3), a: 6.92, b: 8.2, n0: 0 },
+  { pts: NEWLINE.slice(2, 5), a: 9.4, b: 10.0 },
+  { pts: NEWLINE.slice(4, 7), a: 11.65, b: 12.45 },
+];
+function train(t) {
+  let r = RUNS[0]; for (const q of RUNS) if (t >= q.a) r = q;
+  const L = plen(r.pts), x = t < r.a ? 0 : easeIO(prog(t, r.a, r.b));
+  return along(r.pts, L * x);
+}
+function newDist(t) { // distance of train along NEWLINE
+  if (t < 6.92) return 0;
+  const [x, y] = train(t); let best = 0, bd = 1e9;
+  for (let d = 0; d <= NEWLEN; d += 4) { const p = along(NEWLINE, d); const e = Math.hypot(p[0] - x, p[1] - y); if (e < bd) { bd = e; best = d; } }
+  return best;
+}
+const STATIONS = [
+  { n: 'тяжело', x: 330, y: 1300, t: .9, lx: 0, ly: 80, col: OLD },
+  { n: 'знаю', x: 600, y: 1300, t: 2.75, lx: 0, ly: 80, col: OLD },
+  { n: 'легко', x: 870, y: 1300, t: 4.15, lx: 0, ly: 80, col: OLD },
+  { n: 'я', x: 1080, y: 1300, t: 6.2, lx: -50, ly: 92, col: NEW, big: 1, appear: 6.2 },
+  { n: 'путь', x: 1280, y: 900, t: 8.2, lx: 54, ly: 16, col: NEW, appear: 6.9, anchor: 'start' },
+  { n: 'дорогу', x: 1480, y: 450, t: 10.0, lx: 54, ly: 16, col: NEW, appear: 9.0, anchor: 'start' },
+  { n: 'суть', x: 1600, y: 210, t: 12.45, lx: 0, ly: -70, col: NEW, big: 1, appear: 11.0 },
+];
+// decorative lines
+const DECO = [
+  { d: 'M-300 700 H 420 L 720 1000 V 2100', c: '#f2b134', t: 12.75 },
+  { d: 'M 600 -200 V 640 L 900 940 H 2200', c: '#3d7fe0', t: 12.85 },
+  { d: 'M 120 2100 V 1500 L 330 1300 L 730 900 V 300 L 1000 30', c: '#9b5de5', t: 12.95 },
+  { d: 'M 1900 1500 H 1500 L 1280 1280 V 900', c: '#ff7aa8', t: 13.05 },
+];
+
+// ---------- camera ----------
+function camera(t) {
+  const [x, y] = train(t);
+  const zo = easeIO(prog(t, 12.75, 13.6));
+  const cx = lerp(x, 960, zo), cy = lerp(y, 780, zo), z = lerp(1.6, .58, zo);
+  return [cx, cy, z];
+}
+
+function render(t) {
+  const dawn = smooth(6.2, 7.0, t);
+  document.body.style.background = mix('dedcd6', 'f7f5ef', dawn);
+  const [cx, cy, z] = camera(t);
+  let h = '';
+  // grid
+  h += `<g opacity=".5">`; for (let x = -400; x < 2400; x += 80) h += `<path d="M${x} -400 V2400" stroke="#d5d2ca" stroke-width="2"/>`; for (let y = -400; y < 2400; y += 80) h += `<path d="M-400 ${y} H2400" stroke="#d5d2ca" stroke-width="2"/>`; h += `</g>`;
+  // river
+  h += `<path d="M-400 1720 C 200 1600 400 1500 700 1560 S 1300 1500 1500 1100 S 1900 600 2300 500" stroke="${mix('c7d3da', 'bfe0f3', dawn)}" stroke-width="110" fill="none" stroke-linecap="round"/>`;
+  // decorative lines
+  for (const d of DECO) { const on = prog(t, d.t, d.t + .3); h += `<path d="${d.d}" stroke="${on > 0 ? d.c : '#cfccc5'}" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${lerp(.55, 1, on)}"/>`; }
+  // old line
+  const oldCol = t < 6.2 ? OLD : mix('8a909b', 'c3c6cc', prog(t, 6.2, 7));
+  h += `<path d="${poly(OLDLINE)}" stroke="${oldCol}" stroke-width="26" fill="none" stroke-linecap="round"/>`;
+  // closed segment flashes red
+  if (t > 4.15 && t < 6.2) { const bl = Math.floor(t * 4) % 2; h += `<path d="M900 1300 H1060" stroke="${RED}" stroke-width="26" stroke-dasharray="26 18" opacity="${bl ? 1 : .35}"/>`; }
+  // barrier
+  const barOp = t < 5.7 ? 1 : 1 - prog(t, 5.7, 6.0);
+  if (barOp > 0 && t > 3.9) { const s = spring(t - 3.9, 0, 10, 14);
+    h += `<g transform="translate(1080 1300) scale(${s})" opacity="${barOp}"><rect x="-26" y="-70" width="52" height="140" rx="12" fill="${RED}"/><path d="M-14 -40 L14 -12 M14 -40 L-14 -12 M-14 12 L14 40 M14 12 L-14 40" stroke="#fff" stroke-width="7" stroke-linecap="round"/></g>`;
+    const ts = spring(t - 4.2, 0, 10, 14);
+    if (t > 4.2) h += `<g transform="translate(1080 1170) scale(${ts})" opacity="${barOp}"><rect x="-170" y="-40" width="340" height="70" rx="16" fill="${RED}"/><text x="0" y="8" text-anchor="middle" font-size="34" font-weight="800" fill="#fff">перегон закрыт</text></g>`;
+    if (t > 5.7) h += `<path d="M900 1100 L1260 1240" stroke="#16224a" stroke-width="10" stroke-linecap="round" pathLength="1" stroke-dasharray="1.01 2" stroke-dashoffset="${1 - prog(t, 5.7, 5.85)}" opacity="${barOp}"/>`;
+  }
+  // new line (drawn ahead of the train)
+  if (t > 6.2) { const lead = t < 6.92 ? lerp(0, 230, easeOut(prog(t, 6.2, 6.84))) : newDist(t) + 230 + (t > 12.2 ? 400 : 0);
+    const d = Math.min(NEWLEN, lead);
+    h += `<path d="${poly(NEWLINE)}" stroke="${NEW}" stroke-width="30" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${d} 99999"/>`;
+    const tip = along(NEWLINE, d); if (d < NEWLEN) h += `<circle cx="${tip[0]}" cy="${tip[1]}" r="${22 + 6 * Math.sin(t * 14)}" fill="${NEW}" opacity=".35"/>`; }
+  // stations
+  for (const s of STATIONS) {
+    if (s.appear && t < s.appear) continue;
+    const ap = s.appear ? spring(t - s.appear, 0, 10, 14) : 1;
+    const hit = t >= s.t, pulse = hit ? spring(t - s.t, 1.6, 8, 14) : 1;
+    const col = s.col === OLD ? (t < 6.2 ? OLD : '#c3c6cc') : s.col;
+    const r = (s.big ? 36 : 24) * ap;
+    if (hit && t - s.t < .7) { const x = (t - s.t) / .7; h += `<circle cx="${s.x}" cy="${s.y}" r="${r + 120 * easeOut(x)}" fill="none" stroke="${s.col === OLD ? '#16224a' : NEW}" stroke-width="${8 * (1 - x)}" opacity="${1 - x}"/>`; }
+    h += `<g transform="translate(${s.x} ${s.y}) scale(${pulse})"><circle r="${r}" fill="#fff" stroke="${s.big ? '#16224a' : col}" stroke-width="${s.big ? 14 : 11}"/>${s.big ? `<circle r="${r * .45}" fill="${NEW}"/>` : ''}</g>`;
+    const active = hit && (t < s.t + 1.6 || s.n === 'суть');
+    const fs = s.big ? 72 : 52, anchor = s.anchor || 'middle';
+    h += `<text x="${s.x + s.lx}" y="${s.y + s.ly}" text-anchor="${anchor}" font-size="${fs}" font-weight="800" fill="${active ? '#16224a' : '#5b606b'}" stroke="${mix('dedcd6', 'f7f5ef', dawn)}" stroke-width="12" paint-order="stroke" opacity="${ap}">${s.n}</text>`;
+    if (active && s.n !== 'суть') { const w = s.n.length * fs * .58 + 30, bx = anchor === 'start' ? s.x + s.lx - 14 : s.x + s.lx - w / 2;
+      h += `<rect x="${bx}" y="${s.y + s.ly + 14}" width="${w * easeOut(prog(t, s.t, s.t + .25))}" height="8" rx="4" fill="${s.col === OLD ? RED : NEW}"/>`; }
+  }
+  // info badges
+  const badge = (x, y, txt, bg, t0, t1) => { if (t < t0 || t > t1) return ''; const s = spring(t - t0, 0, 10, 14), o = 1 - prog(t, t1 - .2, t1);
+    const w = txt.length * 20 + 50; return `<g transform="translate(${x} ${y}) scale(${s})" opacity="${o}"><rect x="${-w / 2}" y="-34" width="${w}" height="60" rx="30" fill="${bg}"/><text y="8" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">${txt}</text></g>`; };
+  h += badge(330, 1180, 'загруженность 187%', RED, 1.0, 2.2);
+  h += badge(600, 1180, 'стоянка продлена', '#5b606b', 2.85, 3.55);
+  h += badge(1250, 1450, 'новая станция!', NEW, 6.3, 7.4);
+  h += badge(1600, 18, 'конечная', '#16224a', 12.6, 15);
+  // train
+  const [tx, ty, ta] = train(t);
+  const tcol = t < 6.2 ? '#4b5466' : NEW;
+  const moving = RUNS.some(r => t > r.a && t < r.b);
+  if (moving) { for (let k = 1; k <= 4; k++) { const tt = t - k * .03; const [px, py] = train(tt); h += `<circle cx="${px}" cy="${py}" r="${20 - k * 3}" fill="${tcol}" opacity="${.25 - k * .05}"/>`; } }
+  const sag = t > .9 && t < 2.2 ? 6 * Math.exp(-6 * (t - .9)) * Math.sin((t - .9) * 30) : 0;
+  h += `<g transform="translate(${tx} ${ty + sag}) rotate(${ta * 180 / Math.PI})">
+    <rect x="-64" y="-26" width="128" height="52" rx="22" fill="${tcol}" stroke="#16224a" stroke-width="6"/>
+    <rect x="-44" y="-12" width="22" height="18" rx="5" fill="#e9f4ff"/><rect x="-14" y="-12" width="22" height="18" rx="5" fill="#e9f4ff"/><rect x="16" y="-12" width="22" height="18" rx="5" fill="#e9f4ff"/>
+    <circle cx="54" cy="0" r="7" fill="#ffe27a"/></g>`;
+  // confetti at the end
+  if (t > 12.45) { const x = t - 12.45, R = rng(7); for (let i = 0; i < 50; i++) { const a = R() * 6.28, v = 300 + R() * 700, c = ['#f2b134', '#3d7fe0', '#9b5de5', '#ff7aa8', NEW][i % 5];
+    const px = 1600 + Math.cos(a) * v * x, py = 210 + Math.sin(a) * v * x + 500 * x * x; if (x < 1.6) h += `<rect x="${px}" y="${py}" width="18" height="10" rx="3" fill="${c}" transform="rotate(${a * 57 + x * 400} ${px} ${py})" opacity="${clamp(1.6 - x)}"/>`; } }
+
+  let sh = 0; if (t > .9 && t < 1.15) sh = 12; if (t > 6.2 && t < 6.4) sh = 10;
+  const sx = sh ? (hash(t * 30) - .5) * sh : 0, sy = sh ? (hash(t * 30 + 3) - .5) * sh : 0;
+  $('world').setAttribute('transform', `translate(${480 + sx} ${1120 + sy}) scale(${z}) translate(${-cx} ${-cy})`);
+  $('world').innerHTML = h;
+
+  // ---- sign ----
+  let li = 0; for (let i = 0; i < 7; i++) if (t >= LB[i]) li = i;
+  $('capt').textContent = li === 6 ? 'конечная' : li === 3 && t < 6.2 ? 'поезд ожидает отправления' : 'следующая станция';
+  $('dot').style.background = t < 6.2 ? OLD : NEW;
+  $('bar').style.background = t < 6.2 ? OLD : NEW;
+  $('bar').style.width = (100 * prog(t, 0, 13.7)).toFixed(2) + '%';
+  const lineIn = prog(t, LB[li], LB[li] + .2);
+  let s = '';
+  for (const [w, st, e, k] of LINES[li].w) {
+    const x = t - st, on = x >= 0, cur = on && t < e + .05;
+    const size = k === 'big' ? 124 : 104;
+    const op = on ? (cur ? 1 : .8) : .22;
+    const ty2 = on ? lerp(30, 0, easeOut(clamp(x / .2))) : 0;
+    const sc = on && k ? spring(x, .8, 10, 15) : 1;
+    const color = cur && k ? (t < 6.2 ? '#ffb4ad' : '#5ff0a0') : '#fff';
+    s += `<span class="w" style="font-size:${size}px;opacity:${(op * lineIn).toFixed(3)};color:${color};transform:translateY(${ty2.toFixed(1)}px) scale(${sc.toFixed(3)})">${w}</span>`;
+  }
+  $('line').innerHTML = s;
+
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .5 * Math.max(0, 1 - (t - 6.2) / .2));
+  if (t >= 12.45) fl = Math.max(fl, .6 * Math.max(0, 1 - (t - 12.45) / .25));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
