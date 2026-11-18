@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — поиск</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body { font-family: 'Inter', sans-serif; background: #eceaf6; color: #1b1f33; }
+  #bg { position: absolute; inset: 0; }
+  #lyr { position: absolute; left: 40px; width: 880px; top: 200px; height: 380px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; text-align: center; font-weight: 800; line-height: 1.1; }
+  .w { display: inline-block; margin: 0 14px; white-space: nowrap; position: relative; }
+  #win { position: absolute; left: 60px; top: 650px; width: 840px; height: 860px; border-radius: 40px; background: #fff; overflow: hidden;
+         box-shadow: 0 40px 100px rgba(40,30,90,.25), 0 0 0 2px rgba(40,30,90,.06); }
+  #chrome { height: 150px; background: #f1f0f7; border-bottom: 2px solid #e2e0ee; position: relative; }
+  .dots { position: absolute; left: 30px; top: 26px; display: flex; gap: 12px; }
+  .dots i { width: 18px; height: 18px; border-radius: 50%; display: block; }
+  #tab { position: absolute; left: 130px; top: 12px; height: 48px; padding: 0 26px; border-radius: 16px 16px 0 0; background: #fff; display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 600; color: #444a66; }
+  #addr { position: absolute; left: 26px; right: 26px; top: 72px; height: 56px; border-radius: 28px; background: #fff; border: 2px solid #e2e0ee; display: flex; align-items: center; padding: 0 22px; font-size: 26px; color: #6b7090; gap: 12px; overflow: hidden; }
+  #prog { position: absolute; left: 0; bottom: -2px; height: 6px; background: #3b6cf6; }
+  #body { position: absolute; left: 0; right: 0; top: 150px; bottom: 0; }
+  .sbox { position: absolute; left: 50px; right: 50px; height: 96px; border-radius: 48px; border: 3px solid #d8d6e8; display: flex; align-items: center; padding: 0 30px; font-size: 38px; font-weight: 600; gap: 18px; background: #fff; box-shadow: 0 8px 24px rgba(40,30,90,.08); }
+  .caret { display: inline-block; width: 4px; height: 44px; background: #3b6cf6; margin-left: 2px; vertical-align: middle; }
+  .sugg { position: absolute; left: 50px; right: 50px; border-radius: 0 0 36px 36px; background: #fff; box-shadow: 0 20px 40px rgba(40,30,90,.12); overflow: hidden; }
+  .sg { height: 76px; display: flex; align-items: center; gap: 20px; padding: 0 34px; font-size: 32px; font-weight: 500; color: #3a3f5c; }
+  .res { position: absolute; left: 44px; right: 44px; border-radius: 28px; padding: 24px 30px; background: #f8f7fd; border: 2px solid #eceaf6; }
+  .url { font-size: 24px; color: #2e8b57; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .rt { font-size: 38px; font-weight: 800; color: #3b6cf6; margin-top: 6px; }
+  .ln { height: 14px; border-radius: 7px; background: #e3e1ef; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 20px; border-radius: 22px; font-size: 26px; font-weight: 800; color: #fff; white-space: nowrap; }
+  .btn { position: absolute; height: 84px; padding: 0 44px; border-radius: 42px; font-size: 34px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; }
+  #cursor { position: absolute; left: 0; top: 0; width: 60px; height: 80px; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #1b1f33; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="lyr"></div>
+<div id="win">
+  <div id="chrome">
+    <div class="dots"><i style="background:#ff6b6b"></i><i style="background:#ffc24b"></i><i style="background:#3ccf7a"></i></div>
+    <div id="tab"></div>
+    <div id="addr"></div>
+  </div>
+  <div id="body"></div>
+</div>
+<svg id="cursor" viewBox="0 0 30 40"><path d="M2 2 L2 32 L10 25 L15 37 L21 34 L16 23 L26 23 Z" fill="#1b1f33" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>
+<div id="flash"></div>
+<div id="fade"></div>
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+window.ready = document.fonts.ready;
+
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+const BLUE = '#3b6cf6', GREEN = '#22b863', RED = '#ef4c5c', PURPLE = '#7b4fd6';
+
+const typed = (s, t, a, b) => s.slice(0, Math.round(prog(t, a, b) * s.length));
+const caret = t => Math.floor(t * 3) % 2 ? '<span class="caret"></span>' : '<span class="caret" style="opacity:0"></span>';
+const mag = (c = '#9a9fbf', s = 34) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" fill="none" stroke="${c}" stroke-width="3"/><path d="M15 15 L21 21" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/></svg>`;
+const check = (c = '#fff', s = 28) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="M5 12.5 L10 17 L19 7" stroke="${c}" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const logo = (y) => `<div style="position:absolute;left:0;right:0;top:${y}px;display:flex;justify-content:center;align-items:center;gap:18px;font-size:80px;font-weight:900;letter-spacing:-2px">
+  <svg width="86" height="86" viewBox="0 0 24 24"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b4fd6"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><circle cx="10" cy="10" r="7" fill="none" stroke="url(#lg)" stroke-width="3.2"/><path d="M15 15 L21 21" stroke="url(#lg)" stroke-width="3.8" stroke-linecap="round"/></svg>
+  <span style="background:linear-gradient(90deg,#7b4fd6,#3b6cf6);-webkit-background-clip:text;color:transparent">искалка</span></div>`;
+const pop = (t, t0) => spring(t - t0, 0, 10, 14);
+let CUR = null; // cursor position in window coords
+
+// ---------- scenes (return body html) ----------
+function S1(t) {
+  const q = typed('как быть, когда ', t, .15, .85) + typed('тяжело', t, .9, 1.2);
+  let h = logo(90);
+  const sOpen = t > 1.3;
+  h += `<div class="sbox" style="top:250px;${sOpen ? 'border-radius:48px 48px 0 0;border-color:#3b6cf6' : ''}">${mag()}<span>${q.replace('тяжело', `<b style="color:${RED}">тяжело</b>`)}</span>${caret(t)}</div>`;
+  if (sOpen) {
+    const S = ['когда тяжело — что делать', 'когда тяжело в понедельник', 'когда тяжело, но надо', 'когда тяжело и никто не видит'];
+    h += `<div class="sugg" style="top:346px">${S.map((s, i) => { const o = clamp((t - 1.3 - i * .06) / .1); return `<div class="sg" style="opacity:${o};transform:translateY(${(1 - o) * -16}px)">${mag('#b9bdd6', 28)}${s}</div>`; }).join('')}</div>`;
+  }
+  return h;
+}
+const resultsTop = (q) => `<div class="sbox" style="top:30px;height:84px;font-size:34px">${mag()}<span>${q}</span></div>`;
+function S2(t) {
+  let h = resultsTop('как быть, когда <b style="color:' + RED + '">тяжело</b>');
+  const n = Math.round(easeOut(prog(t, 2.2, 2.7)) * 1240000000).toLocaleString('ru-RU');
+  h += `<div style="position:absolute;left:56px;top:136px;font-size:28px;color:#6b7090;font-weight:600">Найдено: ${n} результатов</div>`;
+  const R = [['советы.жизнь', '10 советов, если тяжело'], ['держись.ру', 'Тяжело? Просто держись'], ['наука.инфо', 'Почему всем тяжело: исследование']];
+  R.forEach(([u, ti], i) => {
+    const o = pop(t, 2.22 + i * .08), vis = t > 2.75 + i * .07;
+    h += `<div class="res" style="top:${190 + i * 210}px;transform:scale(${.9 + .1 * o});opacity:${clamp(o)}">
+      <div class="url"><span style="width:26px;height:26px;border-radius:8px;background:#cfd3ea;display:inline-block"></span>${u}</div>
+      <div class="rt" style="color:${vis ? PURPLE : BLUE}">${ti}</div><div class="ln" style="width:90%"></div><div class="ln" style="width:70%"></div>
+      ${vis ? `<div class="chip" style="position:absolute;right:24px;top:20px;background:${PURPLE};transform:scale(${pop(t, 2.75 + i * .07)}) rotate(4deg)">${check()}уже читал</div>` : ''}</div>`;
+  });
+  return h;
+}
+function S3(t) {
+  if (t < 4.15) {
+    let h = resultsTop('10 советов, если тяжело');
+    const a = (t * 360 * 1.6) % 360;
+    h += `<div style="position:absolute;left:50%;top:330px;margin-left:-60px;width:120px;height:120px;border-radius:50%;border:12px solid #e3e1ef;border-top-color:${BLUE};transform:rotate(${a}deg)"></div>`;
+    h += `<div style="position:absolute;left:0;right:0;top:500px;text-align:center;font-size:34px;color:#6b7090;font-weight:600">загрузка…</div>`;
+    return h;
+  }
+  const x = t - 4.15, s = spring(x, .3, 10, 14);
+  return `<div style="position:absolute;left:0;right:0;top:60px;text-align:center;transform:scale(${s})">
+    <svg width="220" height="220" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#ffe1e4"/><circle cx="35" cy="42" r="6" fill="${RED}"/><circle cx="65" cy="42" r="6" fill="${RED}"/><path d="M32 72 Q50 56 68 72" stroke="${RED}" stroke-width="6" fill="none" stroke-linecap="round"/></svg>
+    <div style="font-size:150px;font-weight:900;color:${RED};line-height:1">404</div>
+    <div style="font-size:44px;font-weight:800;margin-top:16px">лёгкий путь не найден</div>
+    <div style="font-size:30px;color:#6b7090;margin-top:12px;font-weight:600">попробуйте свой</div></div>`;
+}
+function S4(t) {
+  let q = 'сдаться';
+  const del = prog(t, 5.0, 5.6); q = q.slice(0, Math.round((1 - del) * q.length));
+  const sel = t > 4.85 && t < 5.0;
+  const typedYa = t >= 6.2;
+  let h = logo(90);
+  const txt = typedYa ? `<b style="color:${GREEN}">я</b>` : q ? `<span style="${sel ? 'background:#cddcff' : ''}">${q}</span>` : `<span style="color:#b4b8d2">введите запрос</span>`;
+  h += `<div class="sbox" style="top:250px;border-color:${typedYa ? GREEN : '#3b6cf6'};${q && !typedYa ? 'border-radius:48px 48px 0 0' : ''}">${mag()}${q || typedYa ? txt + caret(t) : caret(t) + txt}</div>`;
+  if (q && !typedYa) { const S = ['сдаться', 'сдаться и всё забыть', 'сдаться, это нормально?'].filter(s => s.startsWith(q));
+    h += `<div class="sugg" style="top:346px">${S.map(s => `<div class="sg">${mag('#b9bdd6', 28)}${s}</div>`).join('')}</div>`; }
+  const press = t > 6.2 && t < 6.35 ? .9 : 1;
+  h += `<div class="btn" style="left:50%;top:600px;transform:translateX(-50%) scale(${press});background:${typedYa ? GREEN : BLUE};box-shadow:0 12px 30px ${typedYa ? 'rgba(34,184,99,.45)' : 'rgba(59,108,246,.35)'}">Найти</div>`;
+  if (t > 5.75) { const m = easeIO(prog(t, 5.75, 6.15)); CUR = [lerp(700, 440, m), lerp(860, 810, m)]; }
+  return h;
+}
+function S5(t) {
+  let h = resultsTop(`<b style="color:${GREEN}">я</b>`);
+  h += `<div style="position:absolute;left:56px;top:136px;font-size:28px;color:#6b7090;font-weight:600">Найдено: <b style="color:${GREEN};font-size:34px">1</b> результат</div>`;
+  const o = pop(t, 6.9), found = t >= 8.2, f = pop(t, 8.2);
+  h += `<div class="res" style="top:200px;height:${found ? 400 : 230}px;transition:none;transform:scale(${.9 + .1 * o});opacity:${clamp(o)};${found ? `border-color:${GREEN};box-shadow:0 0 ${40 * f}px rgba(34,184,99,.45)` : ''}">
+    <div class="url"><span style="width:26px;height:26px;border-radius:8px;background:${GREEN};display:inline-block"></span>мой.путь</div>
+    <div class="rt" style="font-size:52px">Свой путь</div><div class="ln" style="width:88%"></div><div class="ln" style="width:64%"></div>
+    ${found ? `<div style="margin-top:34px;display:flex;gap:16px;transform:scale(${f});transform-origin:left center"><div class="chip" style="background:${GREEN};font-size:32px;padding:12px 26px">${check('#fff', 34)}найдено</div><div class="chip" style="background:#fff;color:${GREEN};border:3px solid ${GREEN};font-size:32px;padding:10px 24px">совпадение 100%</div></div>` : ''}
+  </div>`;
+  return h;
+}
+function S6(t) {
+  let h = resultsTop(`<b style="color:${GREEN}">я</b> → свой путь`);
+  const route = 'M80 330 C 200 330 180 180 330 170 S 470 300 560 210 S 640 60 700 70';
+  const rp = easeOut(prog(t, 9.5, 10.4)), car = easeIO(prog(t, 10.0, 11.5));
+  h += `<div class="res" style="top:130px;height:450px;padding:0;overflow:hidden;background:#eaf6ee;border-color:${GREEN}">
+    <svg width="752" height="340" viewBox="0 30 752 340" preserveAspectRatio="xMidYMid slice" style="position:absolute;left:0;top:0">
+      ${Array.from({ length: 9 }, (_, i) => `<path d="M${i * 95} 0 L${i * 95 - 80} 400" stroke="#d7ecdd" stroke-width="16"/>`).join('')}
+      ${Array.from({ length: 5 }, (_, i) => `<path d="M0 ${i * 95 + 30} L752 ${i * 95 + 10}" stroke="#d7ecdd" stroke-width="16"/>`).join('')}
+      <path id="rt" d="${route}" stroke="#bfe3c9" stroke-width="26" fill="none" stroke-linecap="round"/>
+      <path d="${route}" stroke="${GREEN}" stroke-width="16" fill="none" stroke-linecap="round" pathLength="1" stroke-dasharray="1.01 2" stroke-dashoffset="${1 - rp}"/>
+      <circle cx="80" cy="330" r="18" fill="#fff" stroke="${GREEN}" stroke-width="8"/>
+      ${rp > .98 ? `<g transform="translate(700 70) scale(${pop(t, 10.4)})"><path d="M0 0 C-14 -18 -24 -26 -24 -40 A24 24 0 0 1 24 -40 C24 -26 14 -18 0 0Z" fill="${RED}"/><circle cy="-40" r="9" fill="#fff"/></g>` : ''}
+      <g id="carg"></g>
+    </svg>
+    <div style="position:absolute;left:30px;right:30px;top:355px">
+      <div style="font-size:40px;font-weight:800">Маршрут: своя дорога</div>
+      <div style="font-size:28px;color:#4d7a5e;font-weight:600;margin-top:10px">пробок нет · в пути: вся жизнь</div></div>
+  </div>`;
+  const press = t > 11.2 && t < 11.35 ? .9 : 1, go = t > 11.2;
+  h += `<div class="btn" style="left:50%;transform:translateX(-50%) scale(${press});background:${go ? GREEN : BLUE};padding:0 60px;top:606px">${go ? check('#fff', 34) + '&nbsp;в пути' : 'Поехали'}</div>`;
+  if (t > 10.8) { const m = easeIO(prog(t, 10.8, 11.15)); CUR = [lerp(680, 450, m), lerp(860, 790, m)]; }
+  window.__car = car;
+  return h;
+}
+function S7(t) {
+  if (t < 12.45) {
+    return `<div style="position:absolute;left:0;right:0;top:300px;text-align:center;font-size:36px;color:#6b7090;font-weight:700">открываю…</div>
+      <div style="position:absolute;left:120px;right:120px;top:370px;height:20px;border-radius:10px;background:#eceaf6"><div style="height:100%;border-radius:10px;width:${100 * easeIO(prog(t, 11.6, 12.4))}%;background:${GREEN}"></div></div>`;
+  }
+  const x = t - 12.45, s = spring(x, .2, 8, 12), beat = 1 + .05 * Math.max(0, Math.sin(x * 9)) * Math.exp(-x * .5);
+  let h = `<div style="position:absolute;left:0;right:0;top:40px;text-align:center">
+    <svg width="380" height="360" viewBox="-60 -60 120 115" style="transform:scale(${s * beat})"><path d="M0 40 C-60 0 -58 -46 -28 -50 C-12 -52 -2 -40 0 -32 C2 -40 12 -52 28 -50 C58 -46 60 0 0 40Z" fill="${RED}"/><ellipse cx="-24" cy="-30" rx="9" ry="6" fill="#fff" opacity=".55"/></svg>
+    <div style="font-size:60px;font-weight:900;margin-top:10px;opacity:${clamp(x * 4)}">вы на месте</div>
+    <div style="font-size:30px;color:#6b7090;font-weight:600;margin-top:10px;opacity:${clamp(x * 4 - .5)}">страница сохранена в избранное</div></div>`;
+  const R = rng(3);
+  for (let i = 0; i < 44; i++) { const a = R() * 6.28, v = 250 + R() * 600, c = [RED, GREEN, BLUE, '#ffc24b', PURPLE][i % 5];
+    const px = 420 + Math.cos(a) * v * x, py = 230 + Math.sin(a) * v * x + 600 * x * x;
+    if (x < 1.6) h += `<div style="position:absolute;left:${px}px;top:${py}px;width:18px;height:10px;border-radius:3px;background:${c};transform:rotate(${a * 57 + x * 500}deg);opacity:${clamp(1.6 - x)}"></div>`; }
+  return h;
+}
+const SC = [S1, S2, S3, S4, S5, S6, S7];
+const TABS = ['Новая вкладка', 'как быть, когда тяжело', 'Ошибка', 'Новая вкладка', 'я — поиск', 'Маршрут', 'суть'];
+const ADDR = ['искалка', 'искалка/как-быть-когда-тяжело', 'советы.жизнь/10-советов', 'искалка', 'искалка/я', 'мой.путь/дорога', 'мой.путь/суть'];
+
+function render(t) {
+  let si = 0; for (let i = 0; i < 7; i++) if (t >= LB[i] - .08) si = i;
+  CUR = null;
+  // cursor in S3 clicking first result
+  if (si === 2 && t < 3.7) { const m = easeIO(prog(t, 3.42, 3.6)); CUR = [lerp(640, 420, m), lerp(800, 420, m)]; }
+  if (si === 1 && t > 3.3) { const m = easeIO(prog(t, 3.3, 3.5)); CUR = [lerp(700, 640, m), lerp(900, 800, m)]; }
+  const body = SC[si](t);
+  // scene enter animation
+  const st = LB[si] - .08, e = spring(t - st, .9, 12, 16);
+  $('body').innerHTML = body;
+  $('body').style.transform = si ? `scale(${e})` : '';
+  $('body').style.opacity = si ? clamp((t - st) / .08) : 1;
+  const icon = si === 2 && t >= 4.15 ? RED : si >= 4 ? GREEN : BLUE;
+  $('tab').innerHTML = `<span style="width:20px;height:20px;border-radius:6px;background:${icon};display:inline-block"></span>${TABS[si]}`;
+  const loading = (si === 2 && t < 4.15) || (si === 6 && t < 12.45) || (si === 4 && t < 7.1);
+  const pl = si === 2 ? prog(t, 3.6, 4.1) : si === 6 ? prog(t, 11.6, 12.4) : prog(t, 6.84, 7.1);
+  $('addr').innerHTML = `${si >= 4 ? `<svg width="22" height="26" viewBox="0 0 22 26"><rect x="2" y="11" width="18" height="13" rx="3" fill="${GREEN}"/><path d="M6 11 V7 a5 5 0 0 1 10 0 V11" stroke="${GREEN}" stroke-width="3" fill="none"/></svg>` : mag('#9a9fbf', 24)}<span>${ADDR[si]}</span>` +
+    (loading ? `<div id="prog" style="width:${100 * pl}%"></div>` : '');
+  // whole-window shake
+  let sh = 0; if (t > 4.15 && t < 4.4) sh = 18 * (1 - prog(t, 4.15, 4.4)); if (t > 6.2 && t < 6.35) sh = 10; if (t > 12.45 && t < 12.65) sh = 12;
+  const sx = sh ? (hash(t * 30) - .5) * sh : 0;
+  const win = $('win'); const bob = Math.sin(t * 1.4) * 6;
+  win.style.transform = `translate(${sx}px, ${bob}px) rotate(${Math.sin(t * .8) * .6}deg)`;
+  win.style.boxShadow = si >= 4 ? `0 40px 100px rgba(20,120,60,.25), 0 0 0 3px rgba(34,184,99,.35)` : si === 2 && t >= 4.15 ? `0 40px 100px rgba(200,40,60,.25), 0 0 0 3px rgba(239,76,92,.4)` : '';
+  // cursor
+  const cur = $('cursor');
+  if (CUR) { const click = (t > 3.6 && t < 3.72) || (t > 6.18 && t < 6.3) || (t > 11.18 && t < 11.3);
+    cur.style.display = 'block'; cur.style.transform = `translate(${60 + CUR[0]}px, ${650 + CUR[1]}px) scale(${click ? .85 : 1})`; } else cur.style.display = 'none';
+  // car on route
+  if (si === 5) { const p = document.querySelector('#rt'); if (p) { const L = p.getTotalLength(), q = p.getPointAtLength(L * (window.__car || 0));
+    document.querySelector('#carg').innerHTML = `<circle cx="${q.x}" cy="${q.y}" r="22" fill="#fff" stroke="${BLUE}" stroke-width="8"/><circle cx="${q.x}" cy="${q.y}" r="40" fill="${BLUE}" opacity=".15"/>`; } }
+  // background
+  const g = clamp((t - 6.2) / .6);
+  $('bg').style.background = `radial-gradient(ellipse 90% 60% at 50% 30%, ${g > 0 ? `rgba(200,245,215,${g})` : 'rgba(0,0,0,0)'}, rgba(0,0,0,0)), linear-gradient(180deg, #eceaf6, ${t >= 4.15 && t < 6.2 ? '#f5e3e8' : '#e4e1f3'})`;
+
+  // lyrics
+  let li = 0; for (let i = 0; i < 7; i++) if (t >= LB[i]) li = i;
+  const lineIn = prog(t, LB[li], LB[li] + .2);
+  let s = '';
+  for (const [w, s0, e0, k] of LINES[li].w) {
+    const x = t - s0, on = x >= 0, cur2 = on && t < e0 + .05;
+    const size = k === 'big' ? 132 : 110;
+    const op = on ? 1 : .2, ty = on ? lerp(28, 0, easeOut(clamp(x / .2))) : 0, sc = on && k ? spring(x, .75, 10, 15) : 1;
+    const acc = t < 6.2 ? RED : GREEN;
+    const color = cur2 && k ? acc : cur2 ? BLUE : '#1b1f33';
+    const ul = on && k ? `<span style="position:absolute;left:0;bottom:-8px;height:12px;border-radius:6px;background:${acc};opacity:.85;width:${100 * easeOut(clamp(x / .25))}%"></span>` : '';
+    s += `<span class="w" style="font-size:${size}px;opacity:${(op * lineIn).toFixed(3)};color:${color};transform:translateY(${ty.toFixed(1)}px) scale(${sc.toFixed(3)})">${w}${ul}</span>`;
+  }
+  $('lyr').innerHTML = s;
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .45 * Math.max(0, 1 - (t - 6.2) / .2));
+  if (t >= 12.45) fl = Math.max(fl, .5 * Math.max(0, 1 - (t - 12.45) / .25));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
