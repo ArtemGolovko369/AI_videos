@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — тетрадь</title>
+<link rel="stylesheet" href="fonts/caveat.css">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #2e231c; }
+  svg { display: block; }
+  #fade { position: absolute; inset: 0; background: #1a1410; opacity: 0; }
+  #vign { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(60,40,20,.28) 100%); pointer-events: none; }
+</style>
+</head>
+<body>
+<svg id="svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="60" height="60" fill="#fbfaf3"/>
+      <path d="M60 0 V60 M0 60 H60" stroke="#9cc3e6" stroke-width="2" opacity=".6"/>
+    </pattern>
+    <filter id="boil" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="1"/>
+      <feDisplacementMap in="SourceGraphic" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="paperShadow" x="-10%" y="-2%" width="120%" height="104%"><feDropShadow dx="0" dy="20" stdDeviation="30" flood-opacity=".5"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 .4  0 0 0 0 .35  0 0 0 0 .25  0 0 0 .07 0"/></filter>
+  </defs>
+  <g id="world">
+    <rect x="0" y="-3000" width="1080" height="16000" fill="url(#grid)" filter="url(#paperShadow)"/>
+    <rect x="0" y="-3000" width="1080" height="16000" filter="url(#grain)"/>
+    <path d="M110 -3000 V13000" stroke="#e5737f" stroke-width="3" opacity=".8"/>
+    <g id="secs"></g>
+  </g>
+</svg>
+<div id="vign"></div>
+<div id="fade"></div>
+
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const $ = id => document.getElementById(id);
+
+const INK = '#1d2f8c', RED = '#d7263d', SEC = 1500;
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const B = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57];
+
+// ---------- measuring ----------
+const mctx = document.createElement('canvas').getContext('2d');
+const MCACHE = {};
+const measure = (s, size) => { const k = s + '|' + size; if (MCACHE[k]) return MCACHE[k];
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'text'); el.setAttribute('font-family', 'Caveat'); el.setAttribute('font-weight', '700'); el.setAttribute('font-size', size); el.textContent = s;
+  $('svg').appendChild(el); const w = el.getComputedTextLength(); el.remove(); return MCACHE[k] = w; };
+let LAYOUT = null;
+function layout() {
+  LAYOUT = LINES.map(L => {
+    const items = L.w.map(([w, s, e, k]) => ({ w, s, e, k, size: k === 'big' ? 200 : 150 }));
+    items.forEach(it => it.wd = measure(it.w, it.size));
+    const gap = 46, tot = items.reduce((a, b) => a + b.wd, 0) + gap * (items.length - 1);
+    const rows = tot > 860 ? [items.slice(0, -1), items.slice(-1)] : [items];
+    const base = rows.length === 1 ? [420] : [330, 530];
+    rows.forEach((r, ri) => { const tw = r.reduce((a, b) => a + b.wd, 0) + gap * (r.length - 1); let x = 480 - tw / 2;
+      r.forEach(it => { it.x = x; it.y = base[ri]; x += it.wd + gap; }); });
+    return items;
+  });
+}
+window.ready = document.fonts.load('700 128px Caveat', 'Было тяжело').then(() => document.fonts.ready).then(layout);
+
+// ---------- drawing helpers (T = current time) ----------
+let T = 0, CID = 0;
+function ink(d, a, b, o = {}) {
+  const p = prog(T, a, b); if (p <= 0) return '';
+  return `<path d="${d}" pathLength="1" stroke-dasharray="1.002 3" stroke-dashoffset="${(1 - p).toFixed(4)}" fill="none" stroke="${o.c || INK}" stroke-width="${o.w || 7}" stroke-linecap="round" stroke-linejoin="round" ${o.x || ''}/>`;
+}
+const circ = (cx, cy, r, ry = r) => `M${cx + r} ${cy} A${r} ${ry} 0 1 1 ${cx - r} ${cy} A${r} ${ry} 0 1 1 ${cx + r} ${cy - 0.1}`;
+function write(txt, x, y, size, a, b, o = {}) {
+  const p = prog(T, a, b); if (p <= 0) return '';
+  const w = measure(txt, size), id = 'c' + (CID++);
+  return `<clipPath id="${id}"><rect x="${x - 20}" y="${y - size * 1.1}" width="${(w + 40) * p}" height="${size * 1.6}"/></clipPath>
+    <text x="${x}" y="${y}" font-family="Caveat" font-weight="700" font-size="${size}" fill="${o.c || INK}" clip-path="url(#${id})" ${o.x || ''}>${txt}</text>`;
+}
+function stick(x, y, s = 1, pose = 'stand', a = 0, b = .3, c = INK) {
+  // y = feet level
+  const h = 150 * s, hr = 24 * s, hy = y - h, by = y - h * .45;
+  let arms = pose === 'up' ? `M${x} ${hy + hr * 2.2} L${x - 40 * s} ${hy - 10 * s} M${x} ${hy + hr * 2.2} L${x + 40 * s} ${hy - 10 * s}` :
+                              `M${x} ${hy + hr * 2.4} L${x - 34 * s} ${by + 10 * s} M${x} ${hy + hr * 2.4} L${x + 34 * s} ${by + 10 * s}`;
+  return ink(circ(x, hy, hr), a, a + (b - a) * .35, { c, w: 6 }) +
+    ink(`M${x} ${hy + hr} L${x} ${by} M${x} ${by} L${x - 28 * s} ${y} M${x} ${by} L${x + 28 * s} ${y}`, a + (b - a) * .3, a + (b - a) * .8, { c, w: 6 }) +
+    ink(arms, a + (b - a) * .7, b, { c, w: 6 });
+}
+function blob(cx, cy, r, seed, n = 26) {
+  const R = rng(seed), pts = [];
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (0.8 + R() * 0.35 + (i % 5 === 0 ? .25 : 0)); pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); }
+  const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  let d = `M${mid(pts[n - 1], pts[0]).join(' ')}`;
+  for (let i = 0; i < n; i++) { const m = mid(pts[i], pts[(i + 1) % n]); d += ` Q${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${m[0].toFixed(1)} ${m[1].toFixed(1)}`; }
+  return d + 'Z';
+}
+
+// ---------- lyrics ----------
+function lyrics(i) {
+  let h = '', hl = '';
+  for (const it of LAYOUT[i]) {
+    const dur = clamp((it.e - it.s) * .7, .12, .3);
+    if (it.k === 'acc' || it.k === 'big') {
+      const hp = prog(T, it.s, it.s + .22);
+      if (hp > 0) hl += `<path style="mix-blend-mode:multiply" d="M${it.x - 14} ${it.y - it.size * .26} L${it.x + it.wd + 14} ${it.y - it.size * .3}" stroke="#ffe14d" stroke-width="${it.size * .46}" stroke-linecap="round" opacity=".85" pathLength="1" stroke-dasharray="1.002 3" stroke-dashoffset="${(1 - hp).toFixed(3)}"/>`;
+    }
+    h += write(it.w, it.x, it.y, it.size, it.s, it.s + dur);
+    if (i === 6 && it.k === 'big') h += ink(`M${it.x - 30} ${it.y - 70} C ${it.x - 40} ${it.y - 190}, ${it.x + it.wd + 60} ${it.y - 180}, ${it.x + it.wd + 40} ${it.y - 50} C ${it.x + it.wd + 30} ${it.y + 50}, ${it.x - 40} ${it.y + 60}, ${it.x - 20} ${it.y - 90}`, 12.5, 12.8, { c: RED, w: 9 });
+  }
+  return hl + h;
+}
+
+// ---------- sections (local coords: 0..1080 x 0..1500) ----------
+const S = [];
+S[0] = () => {
+  let h = '';
+  h += ink('M130 1230 Q300 1212 500 1232 T960 1224', 0, .3);
+  // figure pulling forward (head left), weight behind
+  h += ink(circ(300, 880, 48), .08, .25, { w: 7 });
+  h += ink('M282 872 l12 10 M294 872 l-12 10 M316 872 l12 10 M328 872 l-12 10', .25, .32, { w: 5 });
+  h += ink('M290 905 q12 -8 24 0', .3, .35, { w: 5 });
+  h += ink('M318 926 Q336 990 364 1062', .22, .36);
+  h += ink('M364 1062 L298 1140 L248 1228 M364 1062 L420 1150 L472 1228', .32, .48);
+  h += ink('M330 962 L432 1004 M326 980 L428 1022', .42, .52);
+  h += ink('M430 1012 Q520 1070 598 1052', .5, .6);
+  h += ink('M604 1052 Q616 958 702 958 Q790 958 800 1052', .55, .7, { w: 8 });
+  h += ink(circ(702, 1110, 126), .62, .9, { w: 8 });
+  h += write('1000 кг', 600, 1150, 76, .9, 1.25);
+  h += ink('M590 1238 l22 28 l-14 26 M800 1236 l-10 34 l22 22 M700 1240 l4 40', .95, 1.15, { w: 5 });
+  h += ink('M240 840 l-34 -22 M232 880 l-40 0 M240 918 l-34 18', 1.0, 1.2, { w: 5 });
+  h += ink('M262 830 c-10 16 -14 24 -14 30 a10 10 0 0 0 20 0 c0 -6 -2 -14 -6 -30z', 1.3, 1.45, { w: 4 });
+  h += ink('M236 760 c-14 18 -18 28 -18 34 a12 12 0 0 0 24 0 c0 -6 -2 -16 -6 -34z', 1.6, 1.75, { w: 4 });
+  // stress spiral scribble cloud above
+  h += ink('M300 720 c40 -10 60 20 40 40 c-20 20 -70 10 -60 -30 c10 -40 80 -40 100 0 c20 40 -20 80 -70 70 c-50 -10 -70 -60 -40 -100', 1.4, 1.95, { w: 5 });
+  return h;
+};
+S[1] = () => {
+  const x = T - 2.16, sc = spring(x, 0, 10, 14);
+  let h = `<g transform="translate(530 980) rotate(-3) scale(${sc}) translate(-530 -980)">
+    <rect x="230" y="700" width="600" height="560" fill="#fff1a1" stroke="${INK}" stroke-width="3" opacity=".97"/>
+    <rect x="440" y="672" width="200" height="60" fill="#d8e7f5" opacity=".75" transform="rotate(4 540 700)"/></g>`;
+  h += write('напоминание:', 285, 820, 84, 2.22, 2.45);
+  h += write('будет тяжело', 285, 960, 112, 2.38, 2.7);
+  h += ink('M300 990 Q450 975 760 985', 2.62, 2.74, { w: 5 });
+  h += ink('M330 1090 L440 1200 L720 1010', 2.75, 2.95, { w: 11, c: RED });
+  h += write('ок', 720, 1220, 110, 3.0, 3.2, { c: RED });
+  return h;
+};
+S[2] = () => {
+  let h = '';
+  h += ink('M140 1360 L300 1220 L380 1262 L520 1060 L600 1122 L760 820 L840 880 L940 760', 3.56, 4.0);
+  h += stick(470, 1110, .55, 'stand', 3.8, 4.05);
+  if (T > 4.15) {
+    const x = T - 4.15, s = spring(x, 0, 12, 10) * 1;
+    h += `<g transform="translate(560 1000) scale(${s}) translate(-560 -1000)"><path d="${blob(560, 1000, 250, 7)}" fill="${INK}" opacity=".93"/></g>`;
+    const R = rng(77);
+    for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 290 + R() * 160, r = 8 + R() * 22; if (x > .04 + i * .01) h += `<circle cx="${560 + Math.cos(a) * d}" cy="${1000 + Math.sin(a) * d * .8}" r="${r}" fill="${INK}" opacity=".9"/>`; }
+    for (let i = 0; i < 4; i++) { const dx = 420 + i * 90, l = 140 * easeOut(prog(T, 4.3 + i * .05, 4.75)); if (l > 0) h += `<path d="M${dx} 1180 L${dx} ${1180 + l}" stroke="${INK}" stroke-width="${22 - i * 3}" stroke-linecap="round" opacity=".9"/>`; }
+  }
+  return h;
+};
+S[3] = () => {
+  let h = '';
+  const size = 230, wNe = measure('НЕ', size), wMogu = measure('МОГУ', size), gap = 50;
+  const x0 = 480 - (wNe + gap + wMogu) / 2, y = 1060;
+  // erase "НЕ": clip from left as eraser passes
+  const er = easeIO(prog(T, 5.7, 6.1));
+  const ex = x0 - 40 + er * (wNe + 80);
+  const id = 'ne' + (CID++);
+  h += `<clipPath id="${id}"><rect x="${ex}" y="${y - 260}" width="1200" height="400"/></clipPath><g clip-path="url(#${id})">${write('НЕ', x0, y, size, 4.88, 5.15)}</g>`;
+  h += write('МОГУ', x0 + wNe + gap, y, size, 5.12, 5.5);
+  h += ink(`M${x0} ${y + 40} Q480 ${y + 70} ${x0 + wNe + gap + wMogu} ${y + 36}`, 5.45, 5.62, { w: 6 });
+  // crumbs
+  const R = rng(9);
+  for (let i = 0; i < 12; i++) { const cx = x0 + R() * wNe, cy = y + 40 + R() * 90; if (ex > cx + 10) h += `<path d="M${cx} ${cy} q8 -6 14 2" stroke="#e29aa9" stroke-width="5" fill="none" stroke-linecap="round"/>`; }
+  // eraser object
+  if (T > 5.62 && T < 6.3) { const ey = y - 120 + Math.sin(T * 40) * 12, op = T > 6.15 ? 1 - prog(T, 6.15, 6.3) : 1;
+    h += `<g transform="translate(${ex} ${ey}) rotate(-18)" opacity="${op}"><rect x="-55" y="-90" width="110" height="200" rx="18" fill="#f4a6b8" stroke="${INK}" stroke-width="5"/><rect x="-55" y="-90" width="110" height="70" rx="18" fill="#8fb8e8" stroke="${INK}" stroke-width="5"/></g>`; }
+  // red circle around МОГУ on "я"
+  const mx = x0 + wNe + gap + wMogu / 2;
+  h += ink(`M${mx - wMogu / 2 - 40} ${y - 120} C ${mx - wMogu / 2 - 60} ${y - 260}, ${mx + wMogu / 2 + 80} ${y - 250}, ${mx + wMogu / 2 + 50} ${y - 60} C ${mx + wMogu / 2 + 30} ${y + 110}, ${mx - wMogu / 2 - 70} ${y + 100}, ${mx - wMogu / 2 - 30} ${y - 150}`, 6.2, 6.45, { c: RED, w: 10 });
+  h += ink(`M${mx + wMogu / 2 + 90} ${y - 210} l14 120 M${mx + wMogu / 2 + 108} ${y - 50} l2 4`, 6.4, 6.55, { c: RED, w: 12 });
+  h += stick(220, 1400, .7, T > 6.2 ? 'up' : 'stand', 5.0, 5.4);
+  return h;
+};
+S[4] = () => {
+  let h = '';
+  h += ink('M240 1260 h120 M480 1320 v-120 M660 1140 h120 M300 960 v-120 M600 900 h180 M780 780 v-120', 6.9, 7.3, { w: 5, c: '#7d8bc2' });
+  h += stick(180, 1440, .45, 'stand', 6.88, 7.05);
+  h += ink('M180 1380 V1260 H420 V1080 H600 V1200 H780 V900 H540 V720 H900', 6.95, 8.15, { w: 10 });
+  if (T > 8.2) {
+    const s = spring(T - 8.2, 0, 10, 15);
+    h += `<g transform="translate(900 720) scale(${s})"><path d="M-10 -40 L40 0 L-10 40" stroke="${INK}" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+    h += ink('M940 640 l-30 -40 M985 720 l50 0 M945 800 l-30 40 M900 620 l0 -50', 8.25, 8.45, { w: 6 });
+    h += ink('M880 840 l40 40 M920 840 l-40 40', 8.4, 8.55, { c: RED, w: 9 });
+  }
+  return h;
+};
+const ROADC = 'M330 1470 Q390 1210 560 1125 Q790 1030 610 840 Q525 750 540 680';
+S[5] = () => {
+  let h = '';
+  h += ink('M170 1470 Q240 1180 470 1100 Q690 1020 560 850 Q490 760 520 680', 9.48, 10.25, { w: 8 });
+  h += ink('M500 1470 Q540 1240 650 1150 Q880 1040 670 840 Q570 750 560 680', 9.55, 10.3, { w: 8 });
+  const cp = prog(T, 10.0, 10.45);
+  if (cp > 0) { const id = 'rm' + (CID++);
+    h += `<mask id="${id}"><path d="${ROADC}" pathLength="1" stroke="#fff" stroke-width="40" fill="none" stroke-dasharray="1.002 3" stroke-dashoffset="${1 - cp}"/></mask>
+      <path d="${ROADC}" stroke="${INK}" stroke-width="7" fill="none" stroke-dasharray="26 26" stroke-linecap="round" mask="url(#${id})"/>`; }
+  h += ink('M140 680 H940', 10.3, 10.5, { w: 5 });
+  h += ink('M830 680 A70 70 0 0 1 690 680', 10.4, 10.6, { w: 7 });
+  h += ink('M760 590 v-40 M700 612 l-26 -28 M820 612 l26 -28 M650 660 l-36 -10 M870 660 l36 -10', 10.55, 10.75, { w: 5 });
+  h += ink('M200 900 v-110 h140 v110 z M190 800 L270 730 L350 800', 10.6, 10.9, { w: 6 });
+  h += ink('M850 1380 v-110 ' + circ(850, 1220, 60).replace('M', 'M'), 10.8, 11.1, { w: 6 });
+  h += ink('M160 1180 v-90 ' + circ(160, 1040, 50), 10.95, 11.2, { w: 6 });
+  h += ink('M360 560 q20 -20 40 0 q20 -20 40 0 M520 520 q16 -16 32 0 q16 -16 32 0', 11.1, 11.35, { w: 5 });
+  // walker on the road
+  if (T > 10.1) { const pe = window.__road || (window.__road = (() => { const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', ROADC); return p; })());
+    const L = pe.getTotalLength(), u = easeIO(prog(T, 10.1, 11.5)), pt = pe.getPointAtLength(L * (.05 + u * .8)), s = lerp(.55, .25, u);
+    h += stick(pt.x, pt.y, s, 'stand', 10.1, 10.3); }
+  return h;
+};
+S[6] = () => {
+  let h = '';
+  const HEART = 'M540 1380 C 300 1200 170 1020 290 870 C 390 760 520 810 540 910 C 560 810 690 760 790 870 C 910 1020 780 1200 540 1380 Z';
+  h += ink(HEART, 11.68, 12.4, { w: 9 });
+  if (T > 12.45) { const id = 'hc' + (CID++); let hatch = '';
+    for (let i = 0; i < 26; i++) { const x0 = -60 + i * 40; const p = prog(T, 12.45 + i * .013, 12.5 + i * .013);
+      if (p > 0) hatch += `<path d="M${x0} 1420 L${x0 + 420} 760" stroke="${RED}" stroke-width="16" stroke-linecap="round" pathLength="1" stroke-dasharray="1.002 3" stroke-dashoffset="${1 - p}" opacity=".85"/>`; }
+    h += `<clipPath id="${id}"><path d="${HEART}"/></clipPath><g clip-path="url(#${id})">${hatch}</g>`; }
+  h += ink('M540 760 v-80 M330 790 l-50 -50 M750 790 l50 -50 M220 1000 h-70 M860 1000 h70 M300 1220 l-50 40 M780 1220 l50 40', 12.65, 12.95, { w: 6 });
+  h += ink('M190 760 l12 28 l30 2 l-24 18 l8 30 l-26 -16 l-26 16 l8 -30 l-24 -18 l30 -2 z', 12.9, 13.1, { w: 5 });
+  h += ink('M880 1330 l10 24 l26 2 l-20 16 l6 26 l-22 -14 l-22 14 l6 -26 l-20 -16 l26 -2 z', 13.0, 13.2, { w: 5 });
+  h += stick(180, 1440, .6, T > 12.45 ? 'up' : 'stand', 11.9, 12.3);
+  return h;
+};
+
+// ---------- render ----------
+function camAt(t) {
+  let y = 0;
+  for (let i = 1; i < 7; i++) y = lerp(y, i * SEC, easeIO(prog(t, B[i] - .1, B[i] + .24)));
+  return y;
+}
+function render(t) {
+  T = t; CID = 0;
+  $('turb').setAttribute('seed', 1 + Math.floor(t * 8) % 50);
+  const cam = camAt(t);
+  const z = 1 - .3 * easeIO(prog(t, 12.95, 13.85));
+  $('world').setAttribute('transform', `translate(540 960) scale(${z}) translate(-540 ${-cam - 960 + (1 - z) * 300})`);
+  let h = '';
+  for (let i = 0; i < 7; i++) {
+    const top = i * SEC;
+    if (top + SEC < cam - 2200 || top > cam + 2200) continue;
+    h += `<g transform="translate(0 ${top})" filter="url(#boil)">${S[i]()}${lyrics(i)}</g>`;
+  }
+  $('secs').innerHTML = h;
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
