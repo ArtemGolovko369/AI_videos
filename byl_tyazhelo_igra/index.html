@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — уровень</title>
+<link rel="stylesheet" href="fonts/pixel.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0d0a1a; }
+  body { font-family: 'Pixelify Sans', monospace; color: #fff; -webkit-font-smoothing: none; }
+  #stage { position: absolute; inset: 0; }
+  #cv { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; image-rendering: pixelated; }
+  .px { text-shadow: 6px 6px 0 #1b1530, -3px 0 0 #1b1530, 3px 0 0 #1b1530, 0 -3px 0 #1b1530, 0 3px 0 #1b1530; }
+  #lyr { position: absolute; left: 40px; width: 880px; top: 280px; height: 340px; display: flex; align-items: center; justify-content: center; text-align: center; }
+  #line { font-weight: 700; line-height: 1.15; }
+  .w { display: inline-block; margin: 0 18px; white-space: nowrap; }
+  #hud { position: absolute; left: 40px; width: 880px; top: 160px; height: 80px; }
+  #score { position: absolute; right: 0; top: 4px; font-size: 64px; font-weight: 700; color: #ffd23f; display: flex; align-items: center; gap: 18px; }
+  .box { position: absolute; background: #1b1530; border: 8px solid #fff; box-shadow: 0 0 0 8px #1b1530, 16px 16px 0 8px rgba(0,0,0,.45); padding: 26px 34px; }
+  #banner, #over, #cont, #dlg, #win { opacity: 0; }
+  .center { position: absolute; left: 40px; width: 880px; text-align: center; }
+  #pops { position: absolute; inset: 0; }
+  .pop { position: absolute; font-size: 48px; font-weight: 700; color: #ffd23f; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #0d0a1a; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv" width="90" height="160"></canvas>
+  <div id="pops"></div>
+
+  <div id="hud"><div id="score" class="px"></div></div>
+
+  <div id="banner" class="center px" style="top:760px;font-size:72px;font-weight:700;color:#9ef0ff">УРОВЕНЬ 1<br><span style="color:#fff">ЖИЗНЬ</span></div>
+
+  <div id="dlg" class="box" style="left:40px;width:880px;top:1330px;height:180px;font-size:50px;font-weight:700;line-height:1.3">
+    <div id="dl1"></div><div id="dl2" style="color:#ffd23f"></div>
+  </div>
+
+  <div id="over" class="center px" style="top:740px;font-size:120px;font-weight:700;color:#ff4b5c;line-height:1"></div>
+
+  <div id="cont" class="box" style="left:150px;width:660px;top:700px;height:440px;text-align:center">
+    <div style="font-size:66px;font-weight:700">ПРОДОЛЖИТЬ?</div>
+    <div id="cnum" style="font-size:150px;font-weight:700;color:#ffd23f;line-height:1.1"></div>
+    <div style="display:flex;justify-content:center;gap:90px;font-size:66px;font-weight:700">
+      <div id="oyes"></div><div id="ono"></div></div>
+  </div>
+
+  <div id="win" class="center px" style="top:640px;font-size:82px;font-weight:700;color:#ffd23f;line-height:1.1"></div>
+
+  <div id="lyr"><div id="line" class="px"></div></div>
+</div>
+<div id="flash"></div>
+<div id="fade"></div>
+
+<script>
+// ---------- utils ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const smooth = (a, b, t) => { const x = prog(t, a, b); return x * x * (3 - 2 * x); };
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(n * 9973 + 17)();
+const hx = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
+const mix = (a, b, x) => { const A = hx(a), B = hx(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], x))).join(',')})`; };
+const $ = id => document.getElementById(id);
+const snap = (v, s = 8) => Math.round(v / s) * s;
+
+// ---------- timing ----------
+const LINES = [
+  { s: 0.48, w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { s: 2.24, w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { s: 3.60, w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { s: 4.83, w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { s: 6.92, w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { s: 9.45, w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { s: 11.65, w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+const lineAt = t => { for (let i = 0; i < 7; i++) if (t < LB[i + 1]) return i; return 6; };
+
+// ---------- camera / hero motion ----------
+const W = 90, H = 160, G = 107, HX = 20;   // logical canvas; ground top; hero screen x
+function vel(t) {
+  if (t < 4.6) return 6;
+  if (t < 4.8) return lerp(6, 0, prog(t, 4.6, 4.8));
+  if (t < 6.25) return 0;
+  if (t < 6.6) return lerp(0, 28, prog(t, 6.25, 6.6));
+  if (t < 11.8) return 28;
+  if (t < 12.0) return lerp(28, 0, prog(t, 11.8, 12.0));
+  return 0;
+}
+const DT = 1 / 600, CAM = [0];
+for (let i = 1; i <= 15 * 600; i++) CAM.push(CAM[i - 1] + vel(i * DT) * DT);
+const camX = t => { const f = clamp(t, 0, 15) / DT, i = Math.floor(f); return lerp(CAM[i], CAM[Math.min(i + 1, CAM.length - 1)], f - i); };
+const heroW = t => camX(t) + HX;
+const WALL_X = heroW(8.2) + 12;
+const PIT0 = heroW(10.0) + 18, PIT1 = heroW(11.75) + 16;
+const CHEST_X = heroW(12.0) + 18;
+const COIN_T = [7.0, 7.25, 7.5, 7.75, 7.97, 8.6, 8.85, 9.1, 9.3, 10.3, 10.6, 10.9, 11.2, 11.5];
+const COINS = COIN_T.map(t => ({ t, x: heroW(t) + 6 }));
+const score = t => COIN_T.filter(c => t >= c).length * 100 + (t >= 8.2 ? 1000 : 0) + (t >= 12.45 ? 5000 : 0);
+
+// ---------- canvas drawing ----------
+const cv = $('cv'), cx = cv.getContext('2d');
+const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(Math.round(x), Math.round(y), w, h); };
+function sprite(map, pal, x, y, flip = false, tint = null) {
+  for (let j = 0; j < map.length; j++) for (let i = 0; i < map[j].length; i++) {
+    const ch = map[j][flip ? map[j].length - 1 - i : i]; if (ch === '.') continue;
+    R(x + i, y + j, 1, 1, tint && ch !== 'K' ? tint : pal[ch]);
+  }
+}
+const HERO_PAL = { K: '#1b1530', H: '#4a2f22', S: '#f2c29b', E: '#1b1530', T: '#2ec4b6', t: '#1f8f86', P: '#34355a', W: '#ffffff', C: '#ff4b5c' };
+const HERO_TOP = ['...KKKKK....', '..KCCCCCK...', '.KCCCCCCCKK.', '.KHSSSSSSK..', '.KSSESSESK..', '.KSSSSSSSK..', '..KSSSSSK...', '...KKKKK....',
+                  '..KTTTTTK...', '.KTTTTTTTK..', '.KStTTTtSK..', '..KTTTTTK...'];
+const LEGS = [['..KPPKPPK...', '..KPPKPPK...', '..KWWKWWK...', '..KKK.KKK...'],
+              ['.KPPK.KPPK..', '.KPPK..KPPK.', '.KWWK..KWWK.', '.KKK....KKK.']];
+const HERO_ARMSUP = ['..KTTTTTK...', '.SKTTTTTKS..', '.KtTTTTTtK..', '..KTTTTTK...'];
+const HEART = ['.RR.RR.', 'RWRRRRR', 'RRRRRRR', '.RRRRR.', '..RRR..', '...R...'];
+const CHEST_C = ['KKKKKKKKKKKKKK', 'KBBBBBBBBBBBBK', 'KBbbbbbbbbbbBK', 'KYYYYYYYYYYYYK', 'KBBBBBYYBBBBBK', 'KBbbbbYYbbbbBK', 'KBbbbbbbbbbbBK', 'KBBBBBBBBBBBBK', 'KKKKKKKKKKKKKK'];
+const CHEST_PAL = { K: '#1b1530', B: '#b8743a', b: '#8a5226', Y: '#ffd23f' };
+
+function boulder(cx0, cy0, r, crack = 0) {
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = Math.hypot(x, y * 1.1); if (d > r) continue;
+    let c = d > r - 1.2 ? '#1b1530' : (x + y < -r * .5 ? '#a7a3b8' : x + y < r * .4 ? '#7b7690' : '#57536b');
+    if (d <= r - 1.2 && hash(x * 31 + y * 7 + 400) > .93) c = '#4a465c';
+    R(cx0 + x, cy0 + y, 1, 1, c);
+  }
+  if (crack > 0) { let x = cx0 - 2, y = cy0 - r + 2; for (let i = 0; i < crack * 10; i++) { R(x, y, 1, 1, '#1b1530'); x += (i % 3 ? 1 : -1); y += 1; } }
+}
+function coin(x, y, t) {
+  const ph = Math.floor(t * 10) % 4, w = [6, 4, 2, 4][ph];
+  R(x - w / 2, y - 3, w, 7, '#1b1530'); R(x - w / 2 + (w > 2 ? 1 : 0), y - 2, Math.max(1, w - 2), 5, '#ffd23f');
+  if (w > 2) R(x - w / 2 + 1, y - 2, 1, 2, '#fff6b0');
+}
+const MTN = (wx, f, a, o) => Math.floor(o + a * (Math.sin(wx * f) * .6 + Math.sin(wx * f * 2.3 + 1.7) * .3 + Math.sin(wx * f * 5.1 + .4) * .1));
+const RAIN = Array.from({ length: 70 }, (_, i) => { const r = rng(i + 50); return { x: r() * 140, y: r() * 180, v: 160 + r() * 80 }; });
+const CLOUDS = Array.from({ length: 6 }, (_, i) => { const r = rng(i + 90); return { x: r() * 300, y: 27 + r() * 45, w: 10 + Math.floor(r() * 10) }; });
+const DEBRIS_B = Array.from({ length: 26 }, (_, i) => { const r = rng(i + 200); return { vx: (r() - .5) * 120, vy: -40 - r() * 90, s: 2 + Math.floor(r() * 3) }; });
+const DEBRIS_W = Array.from({ length: 22 }, (_, i) => { const r = rng(i + 300); return { vx: 20 + r() * 110, vy: -30 - r() * 90, ox: r() * 14, oy: r() * 40 }; });
+const CONF = Array.from({ length: 60 }, (_, i) => { const r = rng(i + 600); return { vx: (r() - .5) * 140, vy: -60 - r() * 120, c: ['#ff4b5c', '#ffd23f', '#2ec4b6', '#9ef0ff', '#ff8ad8'][i % 5] }; });
+
+function drawWorld(t) {
+  const cam = camX(t);
+  const dawn = smooth(6.15, 6.6, t) * .55 + smooth(6.6, 13, t) * .45;
+  // sky: banded gradient
+  for (let y = 0; y < G; y += 4) {
+    const k = y / G;
+    const storm = mix('140f2a', '3b2d5c', k), day = k < .6 ? mix('2b4c8c', 'ff9e5e', k / .6) : mix('ff9e5e', 'ffd59a', (k - .6) / .4);
+    cx.fillStyle = storm; cx.fillRect(0, y, W, 4);
+    cx.globalAlpha = dawn; cx.fillStyle = day; cx.fillRect(0, y, W, 4); cx.globalAlpha = 1;
+  }
+  // sun
+  if (dawn > 0) {
+    const sy = Math.round(lerp(100, 47, smooth(6.2, 13.5, t))), sx = 67;
+    for (let y = -7; y <= 7; y++) for (let x = -7; x <= 7; x++) { const d = Math.hypot(x, y); if (d <= 7) R(sx + x, sy + y, 1, 1, d > 5.8 ? '#ffb347' : '#fff1a8'); }
+  }
+  // clouds
+  for (const c of CLOUDS) {
+    const x = Math.round(((c.x - cam * .25 - t * 3) % 300 + 300) % 300 - 60);
+    const col = dawn > .5 ? '#fff4e6' : '#4b3f73';
+    R(x, c.y, c.w, 4, col); R(x + 3, c.y - 3, c.w - 7, 3, col); R(x + 6, c.y - 5, c.w - 13 > 0 ? c.w - 13 : 2, 2, col);
+  }
+  // mountains far / near
+  for (let x = 0; x < W; x++) {
+    const h1 = MTN(x + cam * .2, .068, 17, G - 34), h2 = MTN(x + cam * .45 + 500, .105, 12, G - 19);
+    R(x, h1, 1, G - h1, dawn > .5 ? '#7f6aa8' : '#2a2148'); R(x, h1, 1, 1, dawn > .5 ? '#a18cc8' : '#3d3166');
+    R(x, h2, 1, G - h2, dawn > .5 ? '#3f7d6a' : '#1d1838'); R(x, h2, 1, 1, dawn > .5 ? '#5ea98c' : '#2c2550');
+  }
+  // ground tiles
+  const t0 = Math.floor(cam / 8) - 1;
+  for (let tx = t0; tx < t0 + 20; tx++) {
+    const wx = tx * 8, sx = Math.round(wx - cam);
+    const inPit = wx + 8 > PIT0 && wx < PIT1;
+    if (!inPit) {
+      R(sx, G, 8, H - G, '#7a4b30');
+      for (let ty = 0; ty < 10; ty++) { const yy = G + 3 + ty * 8; R(sx, yy, 8, 1, '#5c3622'); R(sx + ((tx + ty) % 2 ? 0 : 4), yy, 1, 8, '#5c3622'); if (hash(tx * 13 + ty) > .8) R(sx + 2, yy + 3, 2, 2, '#9a6644'); }
+      R(sx, G, 8, 3, dawn > .5 ? '#5ad16a' : '#3a8a4a'); R(sx, G + 3, 8, 1, '#2b6638'); if (tx % 3 === 0) R(sx + 3, G - 1, 1, 1, '#5ad16a');
+    } else {
+      // void + built road blocks
+      R(sx, G, 8, H - G, '#120d24');
+      const ahead = heroW(t) + 18 - wx;
+      if (ahead > 0) {
+        const age = ahead / 28, s = Math.min(8, Math.round(age * 80));
+        const yb = G + (age < .12 ? Math.round((1 - age / .12) * -6) : 0);
+        R(sx + (8 - s) / 2, yb, s, s, '#1b1530'); if (s > 2) { R(sx + (8 - s) / 2 + 1, yb + 1, s - 2, s - 2, '#ffd23f'); R(sx + (8 - s) / 2 + 1, yb + 1, s - 2, 1, '#fff6b0'); R(sx + (8 - s) / 2 + 1, yb + s - 2, s - 2, 1, '#d99a1c'); }
+        if (age < .3) { const a = age / .3; for (let k = 0; k < 4; k++) R(sx + 4 + Math.round(Math.cos(k * 1.57 + .7) * a * 10), G - 2 + Math.round(Math.sin(k * 1.57 + .7) * a * 10), 1, 1, '#fff'); }
+      }
+    }
+  }
+  // rain
+  const rainA = 1 - smooth(6.1, 6.5, t);
+  if (rainA > 0) for (const d of RAIN) {
+    const y = ((d.y + t * d.v * .7) % 180) - 15, x = ((d.x - t * d.v * .2) % 140 + 140) % 140 - 25;
+    if (hash(Math.floor(d.x * 7)) < rainA) { R(x, y, 1, 3, '#7f8fd6'); }
+  }
+}
+
+function drawHero(t) {
+  const cam = camX(t);
+  let y = G - 16, x = HX;
+  const moving = vel(t) > .5;
+  const fr = moving ? Math.floor(cam / (t < 6 ? 3 : 5)) % 2 : 0;
+  let carry = t < 6.2;
+  if (carry && moving) y += fr;               // heavy stomp
+  // jumps
+  const jump = (a, b, h) => (t > a && t < b) ? Math.round(Math.sin(Math.PI * prog(t, a, b)) * h) : 0;
+  y -= jump(8.18, 8.62, 16) + jump(12.5, 12.95, 14) + jump(13.05, 13.45, 10);
+  // hit flash
+  const hit = (t > .9 && t < 1.25) || (t > 4.15 && t < 4.6);
+  const tint = hit && Math.floor(t * 20) % 2 ? '#ffffff' : null;
+  const power = t > 6.2 && t < 7.0 && Math.floor(t * 16) % 2 ? '#ffd23f' : null;
+  const top = carry || t > 12.45 ? [...HERO_TOP.slice(0, 8), ...HERO_ARMSUP] : HERO_TOP;
+  sprite(top, HERO_PAL, x, y, false, tint || power);
+  sprite(LEGS[fr], HERO_PAL, x, y + 12, false, tint || power);
+  // stun stars
+  if (t > 4.15 && t < 4.9) for (let k = 0; k < 3; k++) { const a = t * 8 + k * 2.1; R(x + 5 + Math.round(Math.cos(a) * 7), y - 2 + Math.round(Math.sin(a) * 2), 1, 1, '#ffd23f'); }
+  // sweat
+  if (carry && t < 4.7) { const s = (t * 2) % 1; R(x + 11 + Math.round(s * 3), y + 2 + Math.round(s * 6), 1, 2, '#9ef0ff'); }
+  return { x, y };
+}
+
+function render(t) {
+  cx.clearRect(0, 0, W, H);
+  // screen shake
+  let shake = 0;
+  if (t > .9 && t < 1.15) shake = 2; if (t > 4.15 && t < 4.45) shake = 3; if (t > 8.2 && t < 8.4) shake = 2; if (t > 6.2 && t < 6.35) shake = 2;
+  const sxk = shake ? Math.round((hash(Math.round(t * 30)) - .5) * 2 * shake) : 0;
+  cx.save(); cx.translate(sxk, 0);
+  drawWorld(t);
+  const cam = camX(t);
+
+  // wall
+  const wsx = Math.round(WALL_X - cam);
+  if (t < 8.2) {
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 2; i++) { const bx = wsx + i * 8 - (j % 2) * 4, by = G - 8 - j * 8;
+      R(bx, by, 8, 8, '#1b1530'); R(bx + 1, by + 1, 6, 6, '#a5533f'); R(bx + 1, by + 1, 6, 1, '#c97a5c'); }
+    if (t > 7.9) { const a = Math.floor(t * 20) % 2; if (a) R(wsx + 5, G - 30, 2, 2, '#fff'); }
+  } else {
+    const x = t - 8.2;
+    for (const d of DEBRIS_W) { const bx = wsx + d.ox + d.vx * x, by = G - 8 - d.oy * .7 + d.vy * x + 160 * x * x; if (by < H) { R(bx, by, 3, 3, '#1b1530'); R(bx, by, 2, 2, '#a5533f'); } }
+  }
+  // coins
+  for (const c of COINS) { if (t < c.t) coin(Math.round(c.x - cam), G - 22 + Math.round(Math.sin(t * 6 + c.x) * 1), t); }
+  // chest
+  const chx = Math.round(CHEST_X - cam);
+  if (chx < W + 20) {
+    const open = t >= 12.45;
+    if (open) {
+      // light rays
+      const x = t - 12.45;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 8 + x * .8 + Math.PI; for (let r = 4; r < 60 * clamp(x * 3); r += 2) R(chx + 7 + Math.cos(a) * r, G - 9 + Math.sin(a) * r * 1, 1, 1, k % 2 ? '#fff1a8' : '#ffd23f'); }
+      sprite(CHEST_C.slice(3), CHEST_PAL, chx, G - 6);
+      // lid open
+      R(chx, G - 13, 14, 2, '#1b1530'); R(chx + 1, G - 12, 12, 1, '#b8743a');
+      // rising heart
+      const hy = Math.round(lerp(G - 16, 78, easeOut(clamp(x / .8)))), sc = 3;
+      for (let j = 0; j < HEART.length; j++) for (let i = 0; i < 7; i++) { const ch = HEART[j][i]; if (ch === '.') continue; R(chx + 7 - 10 + i * sc, hy + j * sc, sc, sc, ch === 'W' ? '#fff' : '#ff4b5c'); }
+      for (const c of CONF) { const px = chx + 7 + c.vx * x, py = hy + 8 + c.vy * x + 120 * x * x; if (x < 1.6) R(px, py, 2, 2, c.c); }
+    } else sprite(CHEST_C, CHEST_PAL, chx, G - 9);
+  }
+  const hero = drawHero(t);
+  // boulder on head + falling stone
+  if (t < 6.2) boulder(HX + 5, hero.y - 11 + (t < 6.2 ? 0 : 0), 11, t > 4.15 ? 1 : t > .9 ? .5 : 0);
+  else { const x = t - 6.2; for (const d of DEBRIS_B) { const bx = HX + 5 + d.vx * x, by = G - 27 + d.vy * x + 180 * x * x; if (by < H) R(bx, by, d.s, d.s, '#7b7690'); } }
+  if (t > 3.9 && t < 4.15) { const y = lerp(-10, G - 36 - 6, prog(t, 3.9, 4.15) ** 2); R(HX + 1, y, 8, 7, '#1b1530'); R(HX + 2, y + 1, 6, 5, '#57536b'); }
+  if (t >= 4.15 && t < 4.6) { const x = t - 4.15; R(HX + 1 + x * 40, G - 42 + 200 * x * x - 40 * x, 6, 5, '#57536b'); }
+  cx.restore();
+
+  // dim during continue
+  const dim = smooth(4.6, 4.85, t) * (1 - smooth(6.18, 6.22, t));
+  if (dim > 0) { cx.fillStyle = `rgba(10,6,24,${.62 * dim})`; cx.fillRect(0, 0, W, H); }
+  cv.style.filter = dim > 0 ? `grayscale(${dim})` : '';
+
+  // HUD hearts
+  const slots = t < 6.2 ? 3 : 5;
+  let full = t < .9 ? 3 : t < 4.15 ? 2 : t < 6.2 ? 1 : Math.min(5, 1 + Math.floor((t - 6.2) / .09) + 1);
+  for (let i = 0; i < slots; i++) {
+    const on = i < full, blink = (t > 4.15 && t < 6.2 && i === 0 && Math.floor(t * 8) % 2);
+    const pop = t > 6.2 && i >= 1 && t - (6.2 + (i - 1) * .09) < .12 && t >= 6.2 + (i - 1) * .09 ? -2 : 0;
+    for (let j = 0; j < 6; j++) for (let k = 0; k < 7; k++) { const ch = HEART[j][k]; if (ch === '.') continue;
+      R(4 + i * 9 + k, 14 + j + pop, 1, 1, !on || blink ? '#3b2d5c' : ch === 'W' ? '#fff' : '#ff4b5c'); }
+  }
+
+  // ---- HTML layers ----
+  $('score').innerHTML = `<svg width="40" height="48" viewBox="0 0 5 6" shape-rendering="crispEdges"><rect x="1" y="0" width="3" height="6" fill="#1b1530"/><rect x="0" y="1" width="5" height="4" fill="#1b1530"/><rect x="1" y="1" width="3" height="4" fill="#ffd23f"/><rect x="1" y="1" width="1" height="2" fill="#fff6b0"/></svg>${String(score(t)).padStart(5, '0')}`;
+  // popups
+  let pops = '';
+  for (const c of COIN_T) { const x = t - c; if (x >= 0 && x < .6) pops += `<div class="pop px" style="left:${(HX + 2) * 12}px;top:${snap((G - 34) * 12 - x * 200)}px;opacity:${x > .45 ? .5 : 1}">+100</div>`; }
+  if (t >= 8.2 && t < 9.3) { const x = t - 8.2; pops += `<div class="pop px" style="left:200px;width:680px;text-align:center;font-size:66px;color:#9ef0ff;top:${snap(820 - Math.min(x, .2) * 200)}px;opacity:${x > 1 ? 0 : 1};transform:scale(${x < .1 ? 1.3 : 1})">СЕКРЕТ НАЙДЕН! +1000</div>`; }
+  $('pops').innerHTML = pops;
+
+  // level banner
+  $('banner').style.opacity = t < .9 ? 1 : 1 - prog(t, .9, 1.2);
+  $('banner').style.transform = `translateY(${snap(-40 * prog(t, .9, 1.2))}px)`;
+
+  // dialog
+  const dOn = t > 2.16 && t < 3.6;
+  $('dlg').style.opacity = dOn ? 1 : 0;
+  $('dlg').style.transform = `translateY(${snap(lerp(60, 0, easeOut(prog(t, 2.16, 2.3))))}px)`;
+  const L1 = 'ВЕС ГРУЗА: 999 КГ'; $('dl1').textContent = L1.slice(0, Math.floor(prog(t, 2.2, 2.6) * L1.length));
+  const pressed = t > 2.75;
+  $('dl2').innerHTML = t < 2.6 ? '' : `<span style="${pressed ? 'background:#ffd23f;color:#1b1530;padding:0 12px' : ''}">${Math.floor(t * 6) % 2 || pressed ? '►' : '&nbsp;'} ПРИНЯТО</span>`;
+
+  // game over?
+  const ov = t > 4.3 && t < 4.78;
+  $('over').style.opacity = ov ? 1 : 0;
+  const OV = 'КОНЕЦ ИГРЫ'; const n = Math.floor(prog(t, 4.3, 4.5) * OV.length);
+  $('over').innerHTML = OV.slice(0, n).replace(' ', '<br>') + (n >= OV.length && Math.floor(t * 8) % 2 ? '?' : (n >= OV.length ? '&nbsp;' : ''));
+
+  // continue
+  const cOn = t >= 4.75 && t < 6.3;
+  $('cont').style.opacity = cOn ? 1 : 0;
+  $('cont').style.transform = `scale(${t < 4.85 ? .9 : t > 6.2 ? 1.08 : 1})`;
+  $('cnum').textContent = String(Math.max(4, 9 - Math.floor((Math.min(t, 6.2) - 4.75) / .32)));
+  const onYes = t >= 5.7, sel = t >= 6.2;
+  const cur = Math.floor(t * 6) % 2 || sel ? '►' : '&nbsp;';
+  $('oyes').innerHTML = `<span style="color:${onYes ? '#ffd23f' : '#888'};${sel ? 'background:#ffd23f;color:#1b1530;padding:0 14px' : ''}">${onYes ? cur : '&nbsp;'}ДА</span>`;
+  $('ono').innerHTML = `<span style="color:${onYes ? '#888' : '#fff'}">${!onYes ? cur : '&nbsp;'}НЕТ</span>`;
+
+  // win banner
+  const wx = t - 12.6;
+  if (wx > 0) {
+    const st = k => wx > .25 + k * .2 ? '★' : '☆';
+    $('win').innerHTML = `УРОВЕНЬ ПРОЙДЕН!<br><span style="font-size:110px;letter-spacing:20px">${st(0)}${st(1)}${st(2)}</span>`;
+    $('win').style.opacity = 1; $('win').style.transform = `scale(${wx < .1 ? 1.2 : 1})`;
+  } else $('win').style.opacity = 0;
+
+  // flash / fade
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .85 * Math.max(0, 1 - (t - 6.2) / .2));
+  if (t >= 12.45) fl = Math.max(fl, .8 * Math.max(0, 1 - (t - 12.45) / .25));
+  if (t >= 8.2) fl = Math.max(fl, .4 * Math.max(0, 1 - (t - 8.2) / .12));
+  if (t >= .9) fl = Math.max(fl, .3 * Math.max(0, 1 - (t - .9) / .1));
+  if (t >= 4.15) fl = Math.max(fl, .4 * Math.max(0, 1 - (t - 4.15) / .1));
+  $('flash').style.opacity = (Math.round(fl * 4) / 4).toFixed(2);
+  $('fade').style.opacity = prog(t, 13.75, 14.12).toFixed(2);
+
+  renderLine(t);
+}
+
+// ---------- lyrics: coin-jump words ----------
+function renderLine(t) {
+  const li = lineAt(t), L = LINES[li];
+  let h = '';
+  for (const [w, s, e, k] of L.w) {
+    const x = t - s, on = x >= 0, cur = on && t < e + .05;
+    let size = k === 'big' ? 124 : 92, ty = 0, color = '#fff', op = 1;
+    if (!on) { op = .35; color = '#cfc6ff'; }
+    else {
+      // jump like a coin: up then land, snapped to pixel grid
+      if (x < .24) ty = -Math.sin(Math.PI * x / .24) * (k ? 56 : 32);
+      if (cur) color = k === 'big' ? '#ffd23f' : k === 'acc' ? '#ff8a5c' : '#9ef0ff';
+      if (k === 'big' && cur && Math.floor(t * 8) % 4 === 0) color = '#fff6b0';
+    }
+    h += `<span class="w" style="font-size:${size}px;opacity:${op};color:${color};transform:translateY(${snap(ty)}px)">${w}</span>`;
+  }
+  $('line').innerHTML = h;
+}
+window.render = render;
+render(parseFloat(new URLSearchParams(location.search).get('t') || '1.2'));
+</script>
+</body>
+</html>
