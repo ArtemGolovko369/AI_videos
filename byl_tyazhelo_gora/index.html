@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — вершина</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #1b2436; }
+  svg { position: absolute; left: 0; top: 0; }
+  #lyr { position: absolute; left: 40px; width: 880px; top: 210px; height: 380px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; text-align: center;
+         font-family: 'Inter', sans-serif; font-weight: 800; line-height: 1.08; color: #f5f3ef; letter-spacing: -2px; }
+  .w { display: inline-block; margin: 0 14px; white-space: nowrap; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #fade { position: absolute; inset: 0; background: #10141f; opacity: 0; }
+</style>
+</head>
+<body>
+<svg width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="skyCold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3550"/><stop offset="1" stop-color="#8e9db3"/></linearGradient>
+    <linearGradient id="skyWarm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22305c"/><stop offset=".5" stop-color="#d9788a"/><stop offset=".8" stop-color="#ffb37a"/><stop offset="1" stop-color="#ffe0a8"/></linearGradient>
+    <radialGradient id="sunG"><stop offset="0" stop-color="#fff6d6"/><stop offset=".3" stop-color="#ffd38a" stop-opacity=".85"/><stop offset="1" stop-color="#ff9a6a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="75%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".5"/></radialGradient>
+    <linearGradient id="cloudFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe0cc" stop-opacity="0"/><stop offset=".3" stop-color="#ffe0cc" stop-opacity=".85"/><stop offset=".75" stop-color="#ffd2b8" stop-opacity=".85"/><stop offset="1" stop-color="#ffd2b8" stop-opacity="0"/></linearGradient>
+    <filter id="b20"><feGaussianBlur stdDeviation="20"/></filter>
+    <filter id="b6"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="grain"><feTurbulence id="gt" type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="2"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .07 0"/></filter>
+  </defs>
+  <rect id="sky0" width="1080" height="1920" fill="url(#skyCold)"/>
+  <rect id="sky1" width="1080" height="1920" fill="url(#skyWarm)" opacity="0"/>
+  <g id="far"></g>
+  <g id="scene"></g>
+  <g id="snow"></g>
+  <rect width="1080" height="1920" fill="url(#vig)"/>
+  <rect width="1080" height="1920" filter="url(#grain)"/>
+</svg>
+<div id="lyr"></div>
+<div id="flash"></div>
+<div id="fade"></div>
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const smooth = (a, b, t) => { const x = prog(t, a, b); return x * x * (3 - 2 * x); };
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+const hx = h => h.match(/\w\w/g).map(v => parseInt(v, 16));
+const mix = (a, b, x) => { const A = hx(a), B = hx(b); return '#' + A.map((v, i) => Math.round(lerp(v, B[i], x)).toString(16).padStart(2, '0')).join(''); };
+window.ready = document.fonts.ready;
+
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+
+// ---------- mountain ----------
+const PEAK = [705, 380];
+const edge = y => { const base = lerp(700, 640, clamp((y - 400) / 3200)) + 26 * Math.sin(y * .013) + 12 * Math.sin(y * .041);
+  const k = clamp((y - PEAK[1]) / 240); return lerp(PEAK[0], base, k); };
+function mountainD() {
+  let d = `M${edge(4400)} 4400`;
+  for (let y = 4400; y >= PEAK[1]; y -= 20) d += ` L${edge(y).toFixed(1)} ${y}`;
+  d += ` L${PEAK[0]} ${PEAK[1] - 10} L760 450 L840 560 L900 640 L1000 900 L1200 1100 L1500 1300 L1500 4400 Z`;
+  return d;
+}
+const MTN = mountainD();
+const FAR1 = 'M-600 1500 L-200 1050 L60 1280 L300 980 L520 1250 L700 1100 L1100 1400 L1800 1200 L1800 4000 L-600 4000 Z';
+const FAR2 = 'M-600 1700 L-300 1350 L-50 1550 L250 1300 L480 1600 L900 1500 L1400 1700 L1800 1500 L1800 4000 L-600 4000 Z';
+
+// ---------- climber motion ----------
+function climbY(t) {
+  if (t < 4.15) return lerp(3000, 2880, easeOut(prog(t, 0, 4.1)));
+  if (t < 6.2) return 2880 + 110 * spring(t - 4.15, 0, 6, 11);
+  if (t < 6.84) return lerp(2990, 2900, easeOut(prog(t, 6.2, 6.6)));
+  if (t < 11.6) return lerp(2900, 470, easeIO(prog(t, 6.84, 11.6)));
+  return lerp(470, 320, easeOut(prog(t, 11.6, 12.25)));
+}
+const dangling = t => t > 4.15 && t < 6.2;
+function ik(r, tg, l1, l2, dir) {
+  const dx = tg[0] - r[0], dy = tg[1] - r[1]; let d = Math.hypot(dx, dy); d = Math.min(d, l1 + l2 - .01);
+  const a = Math.atan2(dy, dx), c = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+  const e = [r[0] + Math.cos(a + dir * c) * l1, r[1] + Math.sin(a + dir * c) * l1];
+  const end = [r[0] + Math.cos(a) * d, r[1] + Math.sin(a) * d];
+  return [e, end];
+}
+function climber(t, col, rim) {
+  const y = climbY(t);
+  const top = t >= 12.2;
+  let hip, sh, hands, feet, headOff = [8, -30];
+  if (top) {
+    hip = [PEAK[0] - 4, PEAK[1] - 70]; sh = [hip[0] + 2, hip[1] - 72];
+    const raise = t >= 12.45 ? easeOut(prog(t, 12.45, 12.7)) : 0;
+    hands = [[sh[0] + lerp(30, 20, raise), sh[1] + lerp(70, -95, raise)], [sh[0] - 34, sh[1] + 66]];
+    feet = [[hip[0] - 22, PEAK[1] + 4], [hip[0] + 24, PEAK[1] + 8]];
+    headOff = [4, -30];
+  } else if (dangling(t)) {
+    const sw = Math.sin((t - 4.15) * 3.2) * 26 * Math.exp(-(t - 4.15) * .5);
+    const ex = edge(y);
+    hip = [ex - 95 + sw, y]; sh = [hip[0] + 4, hip[1] - 72];
+    const reach = easeIO(prog(t, 5.7, 6.15));
+    hands = [[hip[0] + 14, sh[1] - 70], [lerp(sh[0] - 30, ex - 8, reach), lerp(sh[1] + 60, sh[1] - 60, reach)]];
+    feet = [[hip[0] - 10 + sw * .3, hip[1] + 128], [hip[0] + 18 + sw * .2, hip[1] + 122]];
+  } else {
+    const ex = edge(y);
+    const c = (3000 - y) / 55, s = Math.sin(c * Math.PI), s2 = Math.cos(c * Math.PI);
+    const strain = t < 4.15 ? Math.sin(t * 7) * 3 : 0;
+    hip = [ex - 62 + strain, y]; sh = [hip[0] + 18, hip[1] - 68];
+    hands = [[edge(sh[1] - 60 - 22 * s) - 6, sh[1] - 60 - 22 * s], [edge(sh[1] - 18 + 22 * s) - 6, sh[1] - 18 + 22 * s]];
+    feet = [[edge(hip[1] + 80 + 20 * s2) - 8, hip[1] + 80 + 20 * s2], [edge(hip[1] + 112 - 20 * s2) - 8, hip[1] + 112 - 20 * s2]];
+    if (t > .9 && t < 1.6) { const g = Math.sin((t - .9) * 10) * 14 * (1 - prog(t, .9, 1.6)); hip[0] += g; sh[0] += g * 1.3; }
+  }
+  const limb = (a, b, c, w) => `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)} L${b[0].toFixed(1)} ${b[1].toFixed(1)} L${c[0].toFixed(1)} ${c[1].toFixed(1)}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let h = '';
+  const legs = feet.map(f => ik(hip, f, 66, 66, top ? 1 : 1));
+  const arms = hands.map(f => ik(sh, f, 52, 52, top ? -1 : 1));
+  // back leg/arm first
+  h += limb(hip, legs[1][0], legs[1][1], 22) + limb(sh, arms[1][0], arms[1][1], 17);
+  // backpack + torso + head
+  const ang = Math.atan2(sh[1] - hip[1], sh[0] - hip[0]) * 180 / Math.PI + 90;
+  h += `<g transform="translate(${hip[0]} ${hip[1]}) rotate(${ang})"><rect x="-44" y="-74" width="30" height="58" rx="10" fill="${col}"/><rect x="-18" y="-80" width="38" height="86" rx="18" fill="${col}"/></g>`;
+  const head = [sh[0] + headOff[0], sh[1] + headOff[1]];
+  h += `<circle cx="${head[0]}" cy="${head[1]}" r="20" fill="${col}"/><path d="M${head[0] - 20} ${head[1] - 4} a20 20 0 0 1 40 0" fill="${col}" stroke="${col}" stroke-width="6"/>`;
+  h += limb(hip, legs[0][0], legs[0][1], 22) + limb(sh, arms[0][0], arms[0][1], 17);
+  if (rim > 0) h += `<circle cx="${head[0] + 6}" cy="${head[1] - 4}" r="20" fill="none" stroke="#ffc98a" stroke-width="3" opacity="${rim}" stroke-dasharray="20 200" transform="rotate(-60 ${head[0]} ${head[1]})"/>`;
+  return { h, hip, hand: arms[0][1], hands: arms.map(a => a[1]) };
+}
+
+const SNOW = Array.from({ length: 160 }, (_, i) => { const r = rng(i + 20); return { x: r() * 1300, y: r() * 1920, v: 500 + r() * 900, s: 2 + r() * 4, z: r() }; });
+const CLOUDS = Array.from({ length: 16 }, (_, i) => { const r = rng(i + 70); return { x: -300 + i * 120 + r() * 60, y: 1500 + r() * 160, rx: 160 + r() * 140, ry: 60 + r() * 50 }; });
+
+function render(t) {
+  const warm = smooth(6.4, 12.5, t), stormA = 1 - smooth(6.2, 7.6, t);
+  $('sky1').setAttribute('opacity', warm.toFixed(3));
+  const y = climbY(t);
+  // camera
+  const zo = easeIO(prog(t, 12.5, 13.9));
+  const cy = lerp(y - 60, 980, zo), cx = lerp(560, 640, zo), z = lerp(1.25, .62, zo);
+  let h = '';
+  // sun (screen-ish, in world but far)
+  const sunY = lerp(2300, 1050, smooth(9, 13.5, t));
+  if (warm > 0) h += `<circle cx="300" cy="${cy - 960 / z + (sunY - 0) * .0 + 1200}" r="0"/>`;
+  // parallax far ranges (relative to camera)
+  const par = () => '';
+  h += `<g transform="translate(0 ${cy * .85})"><circle cx="300" cy="${lerp(1400, 280, smooth(9, 13.6, t)) - 0}" r="${520 * warm}" fill="url(#sunG)" opacity="${warm}"/><circle cx="300" cy="${lerp(1400, 280, smooth(9, 13.6, t))}" r="${90 * warm}" fill="#fff2cc" opacity="${warm}"/></g>`;
+  
+  // mountain
+  h += `<path d="${MTN}" fill="${mix('2a3243', '2b2433', warm)}"/>`;
+  h += `<path d="${MTN}" fill="none" stroke="${mix('9fb0c4', 'ffc58f', warm)}" stroke-width="5" opacity=".55"/>`;
+  // snow ledges on the face
+  for (let yy = 600; yy < 4300; yy += 170) { const ex = edge(yy); h += `<path d="M${ex - 4} ${yy} q 40 -10 90 6" stroke="${mix('d7e0ea', 'ffe4c8', warm)}" stroke-width="10" stroke-linecap="round" fill="none" opacity=".7"/>`; }
+  // pitons + rope
+  const pit = []; for (let yy = 4300; yy > y + 60; yy -= 260) pit.push([edge(yy) - 4, yy]);
+  const cl = climber(t, '#121722', smooth(9, 12, t));
+  const harness = [cl.hip[0] + 6, cl.hip[1] + 6];
+  const ropePts = [...pit, harness];
+  const ropeGlow = smooth(6.84, 7.6, t);
+  let rd = `M${ropePts[0][0]} ${ropePts[0][1]}`; for (let i = 1; i < ropePts.length; i++) { const a = ropePts[i - 1], b = ropePts[i]; const sag = dangling(t) && i === ropePts.length - 1 ? 0 : 18; rd += ` Q${(a[0] + b[0]) / 2 - sag} ${(a[1] + b[1]) / 2} ${b[0]} ${b[1]}`; }
+  if (dangling(t)) { const anc = [edge(y - 160) - 4, y - 160]; h += `<path d="M${anc[0]} ${anc[1]} L${harness[0]} ${harness[1] - 70} L${harness[0]} ${harness[1]}" stroke="${ropeGlow > 0 ? '#ffc65a' : '#c94b3c'}" stroke-width="5" fill="none"/><circle cx="${anc[0]}" cy="${anc[1]}" r="8" fill="#9aa3b5"/>`; }
+  if (ropeGlow > 0) h += `<path d="${rd}" stroke="#ffcf6a" stroke-width="16" fill="none" opacity="${.35 * ropeGlow}" filter="url(#b6)"/>`;
+  h += `<path d="${rd}" stroke="${ropeGlow > 0 ? mix('c94b3c', 'ffcf6a', ropeGlow) : '#c94b3c'}" stroke-width="5" fill="none"/>`;
+  for (const p of pit) h += `<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#9aa3b5"/>`;
+  // glowing trail ahead
+  if (t > 6.9) { const ahead = lerp(0, 2600, easeOut(prog(t, 6.9, 10.6))); let g = '';
+    for (let yy = y - 120; yy > Math.max(PEAK[1] + 30, y - 120 - ahead); yy -= 70) { const ex = edge(yy); const tw = .6 + .4 * Math.sin(t * 6 + yy);
+      g += `<circle cx="${ex + 6}" cy="${yy}" r="${9}" fill="#ffd77a" opacity="${tw}"/><circle cx="${ex + 6}" cy="${yy}" r="22" fill="#ffd77a" opacity="${.18 * tw}"/>`; }
+    h += g; }
+  // falling rocks at the slip
+  if (t > 4.15 && t < 5.2) { const x = t - 4.15, R = rng(9); for (let i = 0; i < 9; i++) { const rx = edge(y - 40) - 20 + (R() - .5) * 80 - 60 * x * R(), ry = y - 60 + 900 * x * x + 200 * x * R(); h += `<rect x="${rx}" y="${ry}" width="${10 + R() * 14}" height="${8 + R() * 10}" rx="3" fill="#525a6b" transform="rotate(${x * 400 * R()} ${rx} ${ry})"/>`; } }
+  // flag
+  if (t >= 12.45) { const s = spring(t - 12.45, 0, 9, 13); const hp = cl.hands[0];
+    let fd = `M${hp[0]} ${hp[1] - 150 * s}`; for (let k = 0; k <= 10; k++) { fd += ` L${hp[0] + k * 13 * s} ${hp[1] - 150 * s + Math.sin(t * 9 - k * .7) * 6 * k / 10}`; }
+    for (let k = 10; k >= 0; k--) fd += ` L${hp[0] + k * 13 * s} ${hp[1] - 150 * s + 70 * s + Math.sin(t * 9 - k * .7) * 6 * k / 10}`;
+    h += `<path d="M${hp[0]} ${hp[1] + 40} L${hp[0]} ${hp[1] - 150 * s}" stroke="#121722" stroke-width="8" stroke-linecap="round"/><path d="${fd} Z" fill="#ff6b3d"/>`; }
+  h += cl.h;
+  // cloud sea (in front)
+  const cop = lerp(.35, .95, warm);
+  h += `<g filter="url(#b20)" opacity="${cop}">${CLOUDS.map(c => `<ellipse cx="${c.x + Math.sin(t * .5 + c.y) * 20}" cy="${c.y}" rx="${c.rx}" ry="${c.ry}" fill="${mix('b8c3d3', 'ffe2cf', warm)}"/>`).join('')}</g><rect x="-600" y="1560" width="2400" height="700" fill="url(#cloudFade)" opacity="${cop}"/>`;
+
+  let sh = 0; if (t > .9 && t < 1.2) sh = 10; if (t > 4.15 && t < 4.5) sh = 22 * (1 - prog(t, 4.15, 4.5)); if (t > 6.2 && t < 6.4) sh = 12;
+  const sx = sh ? (hash(t * 30) - .5) * sh : 0, sy = sh ? (hash(t * 30 + 3) - .5) * sh : 0;
+  $('scene').setAttribute('transform', `translate(${540 + sx} ${1150 + sy}) scale(${z}) translate(${-cx} ${-cy})`);
+  $('scene').innerHTML = h;
+  const fo = lerp(-500, 380, prog(cy, 2900, 980) ** 1);
+  $('far').innerHTML = `<g transform="translate(0 ${fo})" opacity="${lerp(.12, 1, smooth(6.4, 10, t))}"><path d="${FAR2}" fill="${mix('5b6a85', 'b98a9a', warm)}"/><path d="${FAR1}" fill="${mix('46546f', '8d6b85', warm)}" transform="translate(0 120)"/></g>`;
+  // blizzard (screen space)
+  let sn = ''; const wind = lerp(1, .15, smooth(6.2, 8, t));
+  for (const p of SNOW) { if (p.z > lerp(1, .35, 1 - stormA)) continue; const x = ((p.x - t * p.v * wind * 1.2) % 1300 + 1300) % 1300 - 100, yy = (p.y + t * p.v * .35) % 1920;
+    sn += `<ellipse cx="${x.toFixed(0)}" cy="${yy.toFixed(0)}" rx="${(p.s * (1 + 3 * wind)).toFixed(1)}" ry="${p.s.toFixed(1)}" fill="#fff" opacity="${(.7 * (.4 + .6 * wind)).toFixed(2)}"/>`; }
+  $('snow').innerHTML = sn;
+  $('gt').setAttribute('seed', 1 + Math.floor(t * 15) % 30);
+
+  // lyrics
+  let li = 0; for (let i = 0; i < 7; i++) if (t >= LB[i]) li = i;
+  const lineIn = prog(t, LB[li], LB[li] + .2);
+  let s = '';
+  for (const [w, s0, e0, k] of LINES[li].w) {
+    const x = t - s0, on = x >= 0, cur = on && t < e0 + .05;
+    const size = k === 'big' ? 150 : 118;
+    const op = on ? (cur ? 1 : .85) : .22, ty = on ? lerp(26, 0, easeOut(clamp(x / .2))) : 0, sc = on && k ? spring(x, .8, 10, 15) : 1;
+    const hot = t >= 6.2;
+    const color = cur && k ? (hot ? '#ffc36b' : '#bcd6ff') : '#f5f3ef';
+    const glow = cur && k ? (hot ? '0 0 34px rgba(255,190,100,.75), 0 6px 20px rgba(0,0,0,.6)' : '0 0 30px rgba(170,200,255,.7), 0 6px 20px rgba(0,0,0,.6)') : '0 6px 20px rgba(0,0,0,.6)';
+    const shake = (k === 'acc' && x >= 0 && x < .25) ? (hash(t * 30 + s0) - .5) * 10 : 0;
+    s += `<span class="w" style="font-size:${size}px;opacity:${(op * lineIn).toFixed(3)};color:${color};text-shadow:${glow};transform:translate(${shake}px,${ty.toFixed(1)}px) scale(${sc.toFixed(3)})">${w}</span>`;
+  }
+  $('lyr').innerHTML = s;
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .45 * Math.max(0, 1 - (t - 6.2) / .2));
+  if (t >= 12.45) fl = Math.max(fl, .5 * Math.max(0, 1 - (t - 12.45) / .3));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
