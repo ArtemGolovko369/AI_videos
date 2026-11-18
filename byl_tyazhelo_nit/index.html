@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Было тяжело — нить</title>
+<link rel="stylesheet" href="fonts/pf.css">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #f6f1ea; }
+  svg { position: absolute; left: 0; top: 0; }
+  #lyr { position: absolute; left: 40px; width: 880px; top: 230px; height: 360px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; text-align: center;
+         font-family: 'Playfair Display', serif; font-weight: 700; line-height: 1.12; color: #2a2321; }
+  .w { display: inline-block; margin: 0 16px; white-space: nowrap; position: relative; }
+  #fade { position: absolute; inset: 0; background: #f6f1ea; opacity: 0; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+</style>
+</head>
+<body>
+<svg width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <radialGradient id="bgG" cx="50%" cy="55%" r="75%"><stop offset="0" stop-color="#fbf8f3"/><stop offset="1" stop-color="#e9e0d3"/></radialGradient>
+    <filter id="sh" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="grain"><feTurbulence id="gt" type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="2"/><feColorMatrix values="0 0 0 0 .3  0 0 0 0 .25  0 0 0 0 .2  0 0 0 .08 0"/></filter>
+    <radialGradient id="dotG"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffd9a8"/><stop offset="1" stop-color="#ff9a6b" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bgG)"/>
+  <rect width="1080" height="1920" filter="url(#grain)"/>
+  <g id="scene"></g>
+</svg>
+<div id="lyr"></div>
+<div id="flash"></div>
+<div id="fade"></div>
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const smooth = x => x * x * (3 - 2 * x);
+const spring = (x, from = 0, k = 9, w = 15) => x <= 0 ? from : 1 - (1 - from) * Math.exp(-k * x) * Math.cos(w * x);
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => rng(Math.floor(n) * 9973 + 17)();
+const $ = id => document.getElementById(id);
+window.ready = document.fonts.load('700 100px "Playfair Display"', 'Было тяжело').then(() => document.fonts.ready);
+
+const LINES = [
+  { w: [['Было', .48, .85], ['тяжело', .90, 2.20, 'acc']] },
+  { w: [['Да', 2.24, 2.50], ['я', 2.55, 2.72], ['знаю', 2.75, 3.55, 'acc']] },
+  { w: [['Было', 3.60, 3.92], ['не', 3.95, 4.12], ['легко', 4.15, 4.80, 'acc']] },
+  { w: [['Понимаю', 4.83, 5.60], ['но', 5.70, 6.15], ['я', 6.20, 6.88, 'big']] },
+  { w: [['Нашел', 6.92, 7.50], ['свой', 7.55, 8.15], ['путь', 8.20, 9.40, 'big']] },
+  { w: [['Свою', 9.45, 9.95], ['дорогу', 10.00, 11.60, 'big']] },
+  { w: [['Жизни', 11.65, 12.02], ['своей', 12.05, 12.40], ['суть', 12.45, 13.70, 'big']] },
+];
+const LB = [0, 2.16, 3.52, 4.75, 6.84, 9.37, 11.57, 99];
+const RED = '#d62839', INK = '#2a2321';
+
+// ---------- thread shapes (N points, u in 0..1) ----------
+const N = 900, L0 = [-120, 1130], R0 = [1200, 1130], C = [480, 1110];
+const U = Array.from({ length: N }, (_, i) => i / (N - 1));
+function withTails(u, a, b, mid, endL = L0, endR = R0) {
+  if (u < a) { const p = mid(0), s = u / a; return [lerp(endL[0], p[0], s), lerp(endL[1], p[1], s)]; }
+  if (u > b) { const p = mid(1), s = (u - b) / (1 - b); return [lerp(p[0], endR[0], s), lerp(p[1], endR[1], s)]; }
+  return mid((u - a) / (b - a));
+}
+const knotCurve = (R, f1, f2, f3, f4) => v => {
+  const e = .55 + .45 * Math.sin(Math.PI * v);
+  return [C[0] + R * e * (.62 * Math.cos(2 * Math.PI * f1 * v) + .38 * Math.cos(2 * Math.PI * f2 * v + 1)),
+          C[1] + R * e * (.62 * Math.sin(2 * Math.PI * f3 * v) + .38 * Math.sin(2 * Math.PI * f4 * v + 2))];
+};
+const KNOT1 = U.map(u => withTails(u, .16, .84, knotCurve(250, 5, 13, 7, 11)));
+const KNOT2 = U.map(u => withTails(u, .16, .84, knotCurve(165, 5, 13, 7, 11)));
+const LOOSE = U.map(u => withTails(u, .12, .88, knotCurve(330, 1.5, 3, 2, 2.5)));
+const STRAIGHT = U.map(u => [lerp(-120, 1200, u), 1130]);
+const RISING = U.map(u => { const x = lerp(-120, 1200, u); return [x, 1130 + 340 - 680 * smooth(clamp((x + 60) / 1180)) + 40 * Math.sin(u * 9)]; });
+function heartPt(v) { // starts and ends at bottom tip
+  const th = Math.PI + v * 2 * Math.PI, k = 20;
+  const x = 16 * Math.pow(Math.sin(th), 3), y = -(13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th));
+  return [C[0] + k * x, C[1] - 40 + k * y];
+}
+const HEART = U.map(u => {
+  const tip = heartPt(0), Lb = [-120, 1500], Rb = [1200, 1500];
+  if (u < .22) { const s = u / .22, base = [lerp(Lb[0], tip[0], s), lerp(Lb[1], tip[1], s)];
+    const lp = prog(s, .55, .95); if (lp > 0 && lp < 1) { const a = lp * 2 * Math.PI; base[0] += -60 * Math.sin(a); base[1] += 50 * (1 - Math.cos(a)); } return base; }
+  if (u > .78) { const s = (u - .78) / .22, base = [lerp(tip[0], Rb[0], s), lerp(tip[1], Rb[1], s)];
+    const lp = prog(s, .05, .45); if (lp > 0 && lp < 1) { const a = lp * 2 * Math.PI; base[0] += 60 * Math.sin(a); base[1] += 50 * (1 - Math.cos(a)); } return base; }
+  return heartPt((u - .22) / .56);
+});
+const waveA = t => U.map(u => [lerp(-120, 1200, u), 1130 + 46 * Math.sin(u * 9.4 + t * 1.6)]);
+
+// staggered mix: pull propagates from the left end
+function mixShapes(A, B, p, stagger = .35) {
+  return A.map((a, i) => { const u = U[i], q = easeIO(clamp((p * (1 + stagger) - u * stagger))); return [lerp(a[0], B[i][0], q), lerp(a[1], B[i][1], q)]; });
+}
+function threadAt(t) {
+  let P;
+  if (t < .9) P = waveA(t);
+  else if (t < 3.6) { P = mixShapes(waveA(t), KNOT1, prog(t, .9, 1.55), .5);
+    const sag = t > 1.2 ? 80 * spring(t - 1.2, 0, 5, 9) : 0; P = P.map((p, i) => [p[0], p[1] + sag * Math.sin(Math.PI * U[i])]); }
+  else if (t < 4.83) { const sagK = KNOT1.map((p, i) => [p[0], p[1] + 80 * Math.sin(Math.PI * U[i])]);
+    P = mixShapes(sagK, KNOT2, prog(t, 3.6, 4.3), .1);
+    if (t > 4.15) P = P.map((p, i) => [p[0] + (hash(t * 30 + i % 7) - .5) * 8, p[1] + (hash(t * 30 + 50 + i % 5) - .5) * 8]); }
+  else if (t < 6.2) P = mixShapes(KNOT2, STRAIGHT, .5 * easeOut(prog(t, 4.83, 6.1)) + .06 * prog(t, 5.7, 5.9), 1.3);
+  else if (t < 9.4) {
+    const from = mixShapes(KNOT2, STRAIGHT, .56, 1.3);
+    P = mixShapes(from, STRAIGHT, prog(t, 6.2, 6.75), .25);
+    // plucked string vibration after snapping straight
+    const x = t - 6.75; if (x > 0) { const A = 60 * Math.exp(-3 * x); P = P.map((p, i) => [p[0], p[1] + A * Math.sin(Math.PI * 3 * U[i]) * Math.sin(x * 26)]); }
+  }
+  else if (t < 11.6) P = mixShapes(STRAIGHT, RISING, prog(t, 9.4, 10.2), .3);
+  else { P = mixShapes(RISING, HEART, prog(t, 11.6, 12.45), .2);
+    if (t > 12.45) { const s = 1 + .035 * Math.max(0, Math.sin((t - 12.45) * 8)) * Math.exp(-(t - 12.45) * .6);
+      P = P.map((p, i) => { const u = U[i]; if (u < .2 || u > .8) return p; return [C[0] + (p[0] - C[0]) * s, C[1] - 40 + (p[1] - C[1] + 40) * s]; }); } }
+  return P;
+}
+const toD = P => 'M' + P.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+function at(P, u) { const f = clamp(u) * (P.length - 1), i = Math.floor(f), j = Math.min(i + 1, P.length - 1); return [lerp(P[i][0], P[j][0], f - i), lerp(P[i][1], P[j][1], f - i)]; }
+
+const PART = Array.from({ length: 26 }, (_, i) => { const r = rng(i + 40); return { x: 120 + r() * 720, v: 120 + r() * 160, d: r() * 1.2, s: .5 + r() * .7, c: i % 3 ? RED : '#f08aa0' }; });
+const heartSm = (c, s) => `<path transform="scale(${s})" d="M0 12 C-30 -10 -22 -36 0 -22 C22 -36 30 -10 0 12 Z" fill="${c}"/>`;
+
+function render(t) {
+  const P = threadAt(t), d = toD(P);
+  let h = '';
+  // camera drift
+  const z = 1 + .02 * Math.sin(t * .5) + (t > 12.45 ? .04 * easeOut(prog(t, 12.45, 14)) : 0);
+  h += `<g transform="translate(480 1110) scale(${z}) translate(-480 -1110)">`;
+  h += `<path d="${d}" stroke="rgba(80,30,20,.28)" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)" transform="translate(6 12)"/>`;
+  h += `<path d="${d}" stroke="${RED}" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  h += `<path d="${d}" stroke="#ff8a8f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55" transform="translate(-2 -3)"/>`;
+  // light running along the thread
+  const runs = [[8.2, 9.35], [10.0, 11.5]];
+  for (const [a, b] of runs) if (t > a && t < b + .2) { const u = easeIO(prog(t, a, b)); const p = at(P, u);
+    for (let k = 1; k <= 6; k++) { const q = at(P, Math.max(0, u - k * .012)); h += `<circle cx="${q[0]}" cy="${q[1]}" r="${26 - k * 3}" fill="#ffc28a" opacity="${.35 - k * .05}"/>`; }
+    h += `<circle cx="${p[0]}" cy="${p[1]}" r="70" fill="url(#dotG)"/><circle cx="${p[0]}" cy="${p[1]}" r="14" fill="#fff"/>`; }
+  // particles at the end
+  if (t > 12.45) for (const p of PART) { const x = t - 12.45 - p.d * .6; if (x <= 0) continue; const y = 1400 - p.v * x * 1.6, xx = p.x + Math.sin(x * 3 + p.x) * 20;
+    h += `<g transform="translate(${xx} ${y}) rotate(${Math.sin(x * 2) * 15})" opacity="${clamp(1.4 - x * .6)}">${heartSm(p.c, p.s * clamp(x * 4))}</g>`; }
+  h += `</g>`;
+  $('scene').innerHTML = h;
+  $('gt').setAttribute('seed', 1 + Math.floor(t * 12) % 30);
+
+  // lyrics
+  let li = 0; for (let i = 0; i < 7; i++) if (t >= LB[i]) li = i;
+  const lineIn = prog(t, LB[li], LB[li] + .22);
+  let s = '';
+  for (const [w, s0, e0, k] of LINES[li].w) {
+    const x = t - s0, on = x >= 0, cur = on && t < e0 + .05;
+    const size = k === 'big' ? 160 : 128;
+    const op = on ? (cur ? 1 : .85) : .18, ty = on ? lerp(24, 0, easeOut(clamp(x / .25))) : 0, sc = on && k ? spring(x, .85, 9, 14) : 1;
+    const color = cur && k ? RED : INK;
+    const ul = on && k ? `<svg style="position:absolute;left:0;top:100%;margin-top:-6px;overflow:visible" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0 12 Q 12 2 25 12 T 50 12 T 75 12 T 100 12" stroke="${RED}" stroke-width="4" fill="none" vector-effect="non-scaling-stroke" pathLength="1" stroke-dasharray="1.01 2" stroke-dashoffset="${1 - easeOut(clamp(x / .3))}"/></svg>` : '';
+    s += `<span class="w" style="font-size:${size}px;opacity:${(op * lineIn).toFixed(3)};color:${color};transform:translateY(${ty.toFixed(1)}px) scale(${sc.toFixed(3)});${cur && k === 'big' ? 'font-style:italic' : ''}">${w}${ul}</span>`;
+  }
+  $('lyr').innerHTML = s;
+  let fl = 0;
+  if (t >= 6.2) fl = Math.max(fl, .35 * Math.max(0, 1 - (t - 6.2) / .15));
+  if (t >= 12.45) fl = Math.max(fl, .4 * Math.max(0, 1 - (t - 12.45) / .25));
+  $('flash').style.opacity = fl.toFixed(3);
+  $('fade').style.opacity = prog(t, 13.8, 14.12).toFixed(3);
+}
+window.render = render;
+window.ready.then(() => render(parseFloat(new URLSearchParams(location.search).get('t') || '1.5')));
+</script>
+</body>
+</html>
