@@ -1,0 +1,35 @@
+{
+  "audio": "track.mp3",
+  "duration": 14.13,
+  "fps": 30,
+  "note": "Тайминг размечен вручную по спектрограмме вокала. mode: calm — спокойная подсветка, dynamic — кинетика.",
+  "lines": [
+    {"text": "Было тяжело", "start": 0.48, "end": 2.20, "scene": "нагрузка 187%", "words": [
+      {"w": "Было", "start": 0.48, "end": 0.85, "mode": "calm", "fx": "highlight"},
+      {"w": "тяжело", "start": 0.90, "end": 2.20, "mode": "calm", "fx": "accent-pop + shake"}]},
+    {"text": "Да я знаю", "start": 2.24, "end": 3.55, "scene": "уведомления", "words": [
+      {"w": "Да", "start": 2.24, "end": 2.50, "mode": "calm", "fx": "highlight"},
+      {"w": "я", "start": 2.55, "end": 2.72, "mode": "calm", "fx": "highlight"},
+      {"w": "знаю", "start": 2.75, "end": 3.55, "mode": "calm", "fx": "accent-pop; кнопка нажата"}]},
+    {"text": "Было не легко", "start": 3.60, "end": 4.80, "scene": "батарея 1%", "words": [
+      {"w": "Было", "start": 3.60, "end": 3.92, "mode": "calm", "fx": "highlight"},
+      {"w": "не", "start": 3.95, "end": 4.12, "mode": "calm", "fx": "highlight"},
+      {"w": "легко", "start": 4.15, "end": 4.80, "mode": "calm", "fx": "accent-pop; батарея падает"}]},
+    {"text": "Понимаю но я", "start": 4.83, "end": 6.88, "scene": "настройки-тумблеры", "words": [
+      {"w": "Понимаю", "start": 4.83, "end": 5.60, "mode": "calm", "fx": "highlight"},
+      {"w": "но", "start": 5.70, "end": 6.15, "mode": "calm", "fx": "highlight; «сдаться» выкл"},
+      {"w": "я", "start": 6.20, "end": 6.88, "mode": "dynamic", "fx": "big-pop; «идти дальше» вкл"}]},
+    {"text": "Нашел свой путь", "start": 6.92, "end": 9.40, "scene": "маршрут", "words": [
+      {"w": "Нашел", "start": 6.92, "end": 7.50, "mode": "dynamic", "fx": "slide-in"},
+      {"w": "свой", "start": 7.55, "end": 8.15, "mode": "dynamic", "fx": "slide-in"},
+      {"w": "путь", "start": 8.20, "end": 9.40, "mode": "dynamic", "fx": "big-pop + shake; маршрут найден"}]},
+    {"text": "Свою дорогу", "start": 9.45, "end": 11.60, "scene": "дорога", "words": [
+      {"w": "Свою", "start": 9.45, "end": 9.95, "mode": "dynamic", "fx": "slide-in"},
+      {"w": "дорогу", "start": 10.00, "end": 11.60, "mode": "dynamic", "fx": "big-pop; дорога прорисована"}]},
+    {"text": "Жизни своей суть", "start": 11.65, "end": 13.70, "scene": "поиск смысла 100%", "words": [
+      {"w": "Жизни", "start": 11.65, "end": 12.02, "mode": "dynamic", "fx": "slide-in"},
+      {"w": "своей", "start": 12.05, "end": 12.40, "mode": "dynamic", "fx": "slide-in"},
+      {"w": "суть", "start": 12.45, "end": 13.70, "mode": "dynamic", "fx": "huge-pop + вспышка + салют"}]}
+  ],
+  "beats": [0.48, 1.36, 2.24, 3.55, 4.82, 6.95, 7.55, 8.25, 9.45, 10.38, 11.65, 12.45]
+}
