@@ -1,0 +1,629 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+html,body{margin:0;padding:0;background:#000;overflow:hidden}
+svg{display:block}
+</style></head>
+<body>
+<svg id="v" xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+<script>
+// Ролик «Здесь кто-нибудь есть?» — анимация всех сцен. frame(t) рисует кадр в момент t (сек).
+const W=1920,H=1080;
+const C={bg:'#070a12',bg2:'#0e1424',bg3:'#18223b',bg4:'#24314f',warm:'#ffd27a',warm2:'#ffad42',red:'#ff3b3b',
+  ink:'#03050a',paper:'#efe6d2',dim:'#7c869c',snow:'#dfe7f5',gold:'#f2c14e',green:'#1f3b2e'};
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const eio=t=>{t=clamp(t);return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2};
+const eout=t=>{t=clamp(t);return 1-Math.pow(1-t,3)};
+const ein=t=>{t=clamp(t);return t*t*t};
+const back=t=>{t=clamp(t);const c1=1.9,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2)};
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+const F_SERIF="DejaVu Serif, serif", F_SANS="DejaVu Sans, sans-serif", F_MONO="DejaVu Sans Mono, monospace";
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+let TL=null, SC=null;   // таймлайн и текущая сцена
+function at(word,n=1){   // момент (локальный, от начала сцены), когда звучит слово
+  let k=0; const lw=word.toLowerCase().replace(/[«»]/g,'');
+  for(const v of TL.voice){
+    if(v.at<SC.start-0.01||v.at>SC.end) continue;
+    for(const w of v.words){ if(w.w.toLowerCase().replace(/[«».,:?!—…]/g,'').startsWith(lw)){k++; if(k===n) return w.s-SC.start;} }
+  }
+  console.warn('no word',word); return 0;
+}
+function vEnd(){ // конец речи в сцене (локально)
+  let e=0; for(const v of TL.voice) if(v.at>=SC.start-0.01&&v.at<=SC.end) e=Math.max(e,v.end-SC.start); return e;
+}
+
+// ---------- общие элементы
+const DEFS=`<defs>
+<linearGradient id="beamG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff3c4" stop-opacity=".95"/><stop offset=".55" stop-color="${C.warm}" stop-opacity=".35"/><stop offset="1" stop-color="${C.warm}" stop-opacity="0"/></linearGradient>
+<radialGradient id="spotG"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".55" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<radialGradient id="warmG"><stop offset="0" stop-color="${C.warm}" stop-opacity=".9"/><stop offset=".4" stop-color="${C.warm2}" stop-opacity=".35"/><stop offset="1" stop-color="${C.warm2}" stop-opacity="0"/></radialGradient>
+<radialGradient id="redG"><stop offset="0" stop-color="${C.red}" stop-opacity="1"/><stop offset="1" stop-color="${C.red}" stop-opacity="0"/></radialGradient>
+<radialGradient id="vig" cx="50%" cy="50%" r="72%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".7"/></radialGradient>
+<linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050813"/><stop offset="1" stop-color="#1b2a4a"/></linearGradient>
+<linearGradient id="fogG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fb0cc" stop-opacity="0"/><stop offset="1" stop-color="#9fb0cc" stop-opacity=".45"/></linearGradient>
+<linearGradient id="goldG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#b8862a"/></linearGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="blur20" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="20"/></filter>
+<filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity=".9"/></filter>
+<pattern id="bricks" width="120" height="60" patternUnits="userSpaceOnUse"><rect width="120" height="60" fill="#3b3430"/><path d="M0,0H120M0,30H120M30,0V30M90,30V60" stroke="#221d1a" stroke-width="5"/></pattern>
+</defs>`;
+
+function T(x,y,txt,size,o={}){ // текст
+  return `<text x="${x}" y="${y}" font-family="${o.f||F_SANS}" font-weight="${o.w||'bold'}" font-size="${size}" fill="${o.c||C.paper}" text-anchor="${o.a||'middle'}" ${o.ls?`letter-spacing="${o.ls}"`:''} ${o.op!=null?`opacity="${o.op}"`:''} ${o.extra||''}>${esc(txt)}</text>`;
+}
+function pop(lt,t0,dur=.35){return back(seg(lt,t0,t0+dur))}
+function G(inner,{x=0,y=0,s=1,r=0,op=1,cx=0,cy=0}={}){ // группа с трансформацией вокруг (cx,cy)
+  return `<g transform="translate(${x+cx},${y+cy}) rotate(${r}) scale(${s}) translate(${-cx},${-cy})" opacity="${clamp(op)}">${inner}</g>`;
+}
+function cam(inner,z,cx=W/2,cy=H/2,dx=0,dy=0){ // камера: зум вокруг точки
+  return `<g transform="translate(${W/2+dx},${H/2+dy}) scale(${z}) translate(${-cx},${-cy})">${inner}</g>`;
+}
+function card(x,y,w,h,txt,size,o={}){ // плашка с текстом
+  return `<g filter="url(#shadow)"><rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="${o.rx||14}" fill="${o.bg||C.paper}" stroke="${o.st||'none'}" stroke-width="4"/></g>`+
+   T(x,y+size*.36,txt,size,{c:o.c||C.ink,f:o.f||F_SANS,ls:o.ls});
+}
+// силуэт человека; y — уровень ступней
+function person(x,y,s=1,o={}){
+  const f=o.fill||C.ink; let g='';
+  if(o.hair) g+=`<path d="M-27,-176 Q-30,-212 0,-214 Q30,-212 27,-176 L34,-120 L-34,-120Z" fill="${f}"/>`;
+  g+=`<circle cx="0" cy="-180" r="25" fill="${f}"/>`;
+  if(o.hood) g+=`<path d="M-30,-182 Q-32,-215 0,-216 Q32,-215 30,-182 L30,-150 L-30,-150Z" fill="${f}"/>`;
+  g+=`<path d="M-32,-148 Q0,-160 32,-148 L38,-62 L-38,-62Z" fill="${f}"/>`;
+  if(o.skirt) g+=`<path d="M-38,-66 L38,-66 L50,-30 L-50,-30Z" fill="${f}"/>`;
+  g+=`<path d="M-32,-66 L-28,0 L-9,0 L0,-52 L9,0 L28,0 L32,-66Z" fill="${f}"/>`;
+  // левая рука вдоль тела
+  if(!o.noLeft) g+=`<path d="M-30,-144 L-46,-70" stroke="${f}" stroke-width="15" stroke-linecap="round"/>`;
+  // правая рука под углом (0 = вперёд-вправо горизонтально)
+  const a=o.arm==null?70:o.arm;
+  g+=`<g transform="translate(28,-140) rotate(${a})"><path d="M0,0 L74,0" stroke="${f}" stroke-width="15" stroke-linecap="round"/>`;
+  if(o.torch) g+=`<rect x="64" y="-9" width="34" height="18" rx="4" fill="#2a2f3a"/><rect x="96" y="-12" width="8" height="24" rx="2" fill="${o.torchOn?C.warm:'#555'}"/>`;
+  if(o.mic) g+=`<rect x="66" y="-5" width="30" height="10" rx="3" fill="#2a2f3a"/><circle cx="102" cy="0" r="11" fill="#3a404d"/>`;
+  if(o.cam) g+=`<rect x="60" y="-22" width="56" height="38" rx="6" fill="#20242d"/><circle cx="118" cy="-3" r="12" fill="#3b4250"/><circle cx="70" cy="-14" r="5" fill="${C.red}"/>`;
+  g+=`</g>`;
+  if(o.rim) g=`<g filter="url(#glow)" opacity=".0"></g>`+g;
+  return `<g transform="translate(${x},${y}) scale(${o.flip?-s:s},${s})">${g}</g>`;
+}
+// луч фонарика: начало (x,y), угол в градусах, длина, полуширина в конце
+function beam(x,y,ang,len,half,op=1){
+  return `<g transform="translate(${x},${y}) rotate(${ang})" opacity="${clamp(op)}"><path d="M0,-7 L${len},${-half} L${len},${half} L0,7Z" fill="url(#beamG)"/><circle r="16" fill="#fff3c4" filter="url(#glow)"/></g>`;
+}
+function stars(seed,n,y1=600,op=.8){const r=rng(seed);let s='';for(let i=0;i<n;i++){s+=`<circle cx="${r()*W}" cy="${r()*y1}" r="${.8+r()*1.8}" fill="#fff" opacity="${(.3+r()*.7)*op}"/>`}return s}
+function snow(lt,seed,n=90,sp=60){const r=rng(seed);let s='';for(let i=0;i<n;i++){const x0=r()*W,y0=r()*H,v=sp*(.6+r()*.8),sz=1.5+r()*3.5;const y=(y0+lt*v)%(H+20)-10;const x=x0+Math.sin(lt*.8+i)*18;s+=`<circle cx="${x}" cy="${y}" r="${sz}" fill="${C.snow}" opacity="${.35+r()*.5}"/>`}return s}
+function dust(lt,seed,n=40,cx=W/2,cy=H/2,rad=600){const r=rng(seed);let s='';for(let i=0;i<n;i++){const a=r()*6.28,d=r()*rad;const x=cx+Math.cos(a)*d+Math.sin(lt*.3+i)*30,y=cy+Math.sin(a)*d*.6-((lt*12+i*40)%200);s+=`<circle cx="${x}" cy="${y}" r="${1+r()*2.5}" fill="${C.warm}" opacity="${.15+r()*.35}"/>`}return s}
+const VIG=`<rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+// маленький дом с окнами
+function house(x,y,w,h,lit,seed,roof='#0c1222',wall='#141d33'){
+  const r=rng(seed);let s=`<rect x="${x}" y="${y-h}" width="${w}" height="${h}" fill="${wall}"/><path d="M${x-12},${y-h} L${x+w/2},${y-h-w*.45} L${x+w+12},${y-h}Z" fill="${roof}"/>`;
+  for(let wy=y-h+30;wy<y-40;wy+=60)for(let wx=x+20;wx<x+w-30;wx+=56){s+=`<rect x="${wx}" y="${wy}" width="26" height="32" fill="${r()<lit?'#f7c86a':'#0a0f1c'}"/>`}
+  return s+`<path d="M${x-12},${y-h} L${x+w/2},${y-h-w*.45} L${x+w+12},${y-h}" stroke="${C.snow}" stroke-width="6" fill="none" opacity=".7"/>`;
+}
+
+// =============== СЦЕНЫ ===============
+const S={};
+
+// 1. Заставка: темнота, щелчок, луч выхватывает надпись на стене
+S[1]=(lt,d)=>{
+  const on=lt>0.9; const flick=on&&!(lt>1.0&&lt<1.08)&&!(lt>1.2&&lt<1.26);
+  const sx=lerp(300,960,eio(seg(lt,1.1,2.6))), sy=lerp(820,470,eio(seg(lt,1.1,2.6)));
+  const rad=on?lerp(120,520,eout(seg(lt,1.0,2.6))):0;
+  let s=`<rect width="${W}" height="${H}" fill="#000"/>`;
+  s+=`<defs><mask id="m1"><rect width="${W}" height="${H}" fill="#000"/>${flick?`<ellipse cx="${sx}" cy="${sy}" rx="${rad*1.5}" ry="${rad}" fill="url(#spotG)"/>`:''}</mask></defs>`;
+  let wall=`<rect width="${W}" height="${H}" fill="url(#bricks)"/><rect width="${W}" height="${H}" fill="#000" opacity=".25"/>`;
+  // нацарапанная надпись
+  wall+=T(960,450,'ЗДЕСЬ КТО-НИБУДЬ',112,{f:F_SERIF,c:'#e9e1cf',extra:'transform="rotate(-3 960 450)" stroke="#b9ad96" stroke-width="2"'});
+  wall+=T(960,590,'ЕСТЬ?',150,{f:F_SERIF,c:'#e9e1cf',extra:'transform="rotate(-2 960 590)" stroke="#b9ad96" stroke-width="2"'});
+  const r=rng(11); for(let i=0;i<40;i++){const x=600+r()*720,y=360+r()*280;wall+=`<path d="M${x},${y} l${r()*30-15},${r()*12}" stroke="#d8cfbc" stroke-width="2" opacity=".5"/>`}
+  s+=`<g mask="url(#m1)">${wall}</g>`;
+  if(flick) s+=`<ellipse cx="${sx}" cy="${sy}" rx="${rad*1.6}" ry="${rad*1.1}" fill="${C.warm}" opacity=".08"/>`;
+  // титр-подзаголовок
+  s+=T(960,800,'ДОКУМЕНТАЛЬНАЯ ИСТОРИЯ',30,{c:C.dim,ls:10,op:seg(lt,2.4,3.2)*(1-seg(lt,d-.6,d))});
+  return s+VIG;
+};
+
+// 2. Рождение: зимняя ночь, город в горах, наезд к окну, дата и метка
+S[2]=(lt,d)=>{
+  const z=lerp(1,2.6,eio(seg(lt,0,d*.85)));
+  let w=`<rect width="${W}" height="${H}" fill="url(#nightSky)"/>${stars(3,120)}`;
+  w+=`<circle cx="1500" cy="190" r="56" fill="#f4efe0" opacity=".9"/><circle cx="1500" cy="190" r="110" fill="#f4efe0" opacity=".08"/>`;
+  w+=`<path d="M0,620 L220,380 L380,520 L560,300 L760,540 L960,340 L1180,560 L1380,360 L1600,520 L1760,400 L1920,560 V1080 H0Z" fill="#1b2744"/>`;
+  w+=`<path d="M560,300 L610,360 L590,350 L560,380 L530,350 L510,360Z M960,340 L1010,400 L960,390 L920,400Z M1380,360 L1420,410 L1380,400 L1350,410Z" fill="${C.snow}" opacity=".8"/>`;
+  w+=`<path d="M0,760 L300,560 L520,700 L760,600 L1000,720 L1260,590 L1520,700 L1920,620 V1080 H0Z" fill="#141e36"/>`;
+  w+=`<rect y="880" width="${W}" height="200" fill="#dfe7f5" opacity=".9"/>`;
+  const hs=[[60,880,180,200,.25],[280,880,150,150,.15],[460,880,220,260,.2],[720,880,160,170,.15],[1120,880,200,220,.1],[1360,880,170,180,.2],[1560,880,230,250,.2]];
+  hs.forEach((h,i)=>w+=house(h[0],h[1],h[2],h[3],h[4],i+5));
+  // главное окно
+  w+=`<rect x="900" y="660" width="190" height="220" fill="#1a2440"/><path d="M888,660 L995,600 L1102,660Z" fill="#0c1222"/><path d="M888,660 L995,600 L1102,660" stroke="${C.snow}" stroke-width="6" fill="none"/>`;
+  w+=`<rect x="965" y="720" width="60" height="74" fill="#ffd27a"/><rect x="965" y="720" width="60" height="74" fill="#ffd27a" filter="url(#glow)" opacity=".8"/><path d="M995,720 V794 M965,757 H1025" stroke="#5b4320" stroke-width="5"/>`;
+  w+=`<circle cx="995" cy="757" r="120" fill="url(#warmG)" opacity=".5"/>`;
+  let s=cam(w,z,995,757,0,lerp(0,40,seg(lt,0,d)));
+  s+=snow(lt,7,110,70);
+  // дата-календарь
+  const p1=pop(lt,.5), out1=1-seg(lt,at('Небольшой')-.3,at('Небольшой')+.1);
+  s+=G(`<rect x="-170" y="-120" width="340" height="240" rx="18" fill="${C.paper}"/><rect x="-170" y="-120" width="340" height="62" rx="18" fill="#c0392b"/><rect x="-170" y="-80" width="340" height="22" fill="#c0392b"/>`+
+    T(0,-76,'ДЕКАБРЬ',30,{c:'#fff',ls:6})+T(0,58,'21.12.1994',54,{c:C.ink,f:F_SERIF}),{x:960,y:420,s:p1,op:out1});
+  // метка на карте
+  const t2=at('Небольшой')-.1, p2=pop(lt,t2), out2=1-seg(lt,at('Здесь')-.2,at('Здесь')+.2);
+  s+=G(`<rect x="-330" y="-90" width="660" height="180" rx="16" fill="#0b1120" opacity=".85" stroke="${C.warm}" stroke-width="3"/>
+    <path d="M-250,-40 a40,40 0 1 1 0.1,0 Z" fill="none"/><g transform="translate(-240,-6)"><path d="M0,40 C-30,0 -36,-10 -36,-26 a36,36 0 0 1 72,0 C36,-10 30,0 0,40Z" fill="${C.red}"/><circle cy="-26" r="13" fill="#fff"/></g>`+
+    T(40,-8,'УСТЬ-КАТАВ',56,{c:C.paper,f:F_SERIF})+T(40,46,'Челябинская область',30,{c:C.dim,w:'normal'}),{x:960,y:420,s:p2,op:out2});
+  // имя
+  const p3=pop(lt,at('Его')), out3=1-seg(lt,d-.4,d);
+  s+=G(`<rect x="-470" y="-90" width="940" height="140" rx="16" fill="#070a12" opacity=".75"/>`+T(0,0,'ДИМА МАСЛЕННИКОВ',84,{f:F_SERIF,c:C.paper,ls:4})+`<rect x="-300" y="26" width="600" height="4" fill="${C.warm}"/>`,{x:960,y:330,s:p3,op:out3});
+  return s+VIG;
+};
+
+// 3. Семья и переезд
+S[3]=(lt,d)=>{
+  const tm=at('Вскоре')-.3; let s='';
+  if(lt<tm+.6){
+    let a=`<rect width="${W}" height="${H}" fill="${C.bg2}"/><ellipse cx="960" cy="900" rx="700" ry="80" fill="#000" opacity=".35"/>`;
+    const p1=pop(lt,.2), p2=pop(lt,at('Мама'));
+    // отец + атом
+    let atom=''; for(let k=0;k<3;k++) atom+=`<ellipse rx="95" ry="32" fill="none" stroke="#7fd3ff" stroke-width="5" transform="rotate(${k*60+lt*70})"/>`;
+    atom+=`<circle r="14" fill="#7fd3ff" filter="url(#glow)"/>`;
+    for(let k=0;k<3;k++){const ang=lt*3+k*2.1,rot=(k*60+lt*70)*Math.PI/180;const ex=95*Math.cos(ang),ey=32*Math.sin(ang);a+='';atom+=`<circle cx="${ex*Math.cos(rot)-ey*Math.sin(rot)}" cy="${ex*Math.sin(rot)+ey*Math.cos(rot)}" r="8" fill="#fff"/>`}
+    a+=G(person(0,0,1.6,{fill:'#000',arm:75})+G(atom,{x:0,y:-470})+T(0,120,'ОТЕЦ',40,{c:C.paper,ls:6})+T(0,170,'физик-ядерщик',32,{c:'#7fd3ff',w:'normal'}),{x:640,y:760,s:p1,cx:0,cy:-200});
+    // мама + весы
+    const tilt=Math.sin(lt*2.2)*8;
+    let sc=`<rect x="-5" y="-100" width="10" height="140" fill="${C.gold}"/><rect x="-50" y="36" width="100" height="12" rx="6" fill="${C.gold}"/><g transform="rotate(${tilt})"><rect x="-120" y="-104" width="240" height="8" rx="4" fill="${C.gold}"/>`+
+      `<g transform="translate(-110,-100) rotate(${-tilt})"><path d="M0,0 L-30,60 M0,0 L30,60" stroke="${C.gold}" stroke-width="3"/><path d="M-40,60 Q0,90 40,60Z" fill="${C.gold}"/></g>`+
+      `<g transform="translate(110,-100) rotate(${-tilt})"><path d="M0,0 L-30,60 M0,0 L30,60" stroke="${C.gold}" stroke-width="3"/><path d="M-40,60 Q0,90 40,60Z" fill="${C.gold}"/></g></g><circle cy="-104" r="10" fill="${C.gold}"/>`;
+    a+=G(person(0,0,1.6,{fill:'#000',hair:1,skirt:1,arm:80})+G(sc,{x:0,y:-450})+T(0,120,'МАМА',40,{c:C.paper,ls:6})+T(0,170,'юрист',32,{c:C.gold,w:'normal'}),{x:1280,y:760,s:p2,cx:0,cy:-200});
+    s+=G(a,{op:1-seg(lt,tm,tm+.6)});
+  }
+  if(lt>tm){
+    const k=seg(lt,tm,tm+.6); const pr=eio(seg(lt,tm+.5,d-.6));
+    let m=`<rect width="${W}" height="${H}" fill="#0c1426"/>`;
+    m+=`<path d="M120,330 C300,250 520,300 700,260 C900,220 1100,280 1300,240 C1500,210 1700,260 1820,300 L1840,760 C1600,820 1300,760 1100,800 C860,850 600,780 380,820 C260,840 160,800 100,760Z" fill="#17233f" stroke="#2c3d63" stroke-width="4"/>`;
+    m+=`<path d="M1230,280 C1250,400 1210,520 1250,640 C1270,720 1240,780 1250,820" stroke="#2f3f63" stroke-width="22" fill="none" stroke-linecap="round"/>`+T(1300,330,'УРАЛ',26,{c:'#4e6390',ls:8,a:'start'});
+    // путь
+    const P0=[1320,560],P1=[1000,380],P2=[640,470];
+    const bz=(t)=>[(1-t)**2*P0[0]+2*(1-t)*t*P1[0]+t*t*P2[0],(1-t)**2*P0[1]+2*(1-t)*t*P1[1]+t*t*P2[1]];
+    let pts=[];for(let i=0;i<=60;i++){const t=i/60*pr;pts.push(bz(t))}
+    m+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${C.warm}" stroke-width="6" stroke-dasharray="18 14"/>`;
+    m+=`<circle cx="${P0[0]}" cy="${P0[1]}" r="14" fill="${C.red}"/>`+T(P0[0]+30,P0[1]+50,'Усть-Катав',34,{c:C.paper,a:'start',w:'normal'});
+    m+=`<circle cx="${P2[0]}" cy="${P2[1]}" r="${10+6*seg(lt,d-1,d-.6)}" fill="${C.warm}" filter="url(#glow)"/>`+T(P2[0],P2[1]+60,'МОСКВА',40,{c:C.warm,f:F_SERIF,op:seg(lt,d-1.2,d-.7)});
+    // поезд
+    const p=bz(pr),q=bz(Math.max(0,pr-.01)); const ang=Math.atan2(p[1]-q[1],p[0]-q[0])*180/Math.PI;
+    const tr=`<rect x="-46" y="-20" width="70" height="38" rx="8" fill="#c94b3b"/><rect x="-118" y="-18" width="64" height="34" rx="6" fill="#d9d2c0"/><rect x="-34" y="-12" width="16" height="12" fill="#fde7a0"/><rect x="-6" y="-12" width="16" height="12" fill="#fde7a0"/><rect x="-108" y="-10" width="16" height="12" fill="#fde7a0"/><rect x="-82" y="-10" width="16" height="12" fill="#fde7a0"/><circle cx="-30" cy="20" r="7" fill="#222"/><circle cx="10" cy="20" r="7" fill="#222"/><circle cx="-100" cy="18" r="6" fill="#222"/><circle cx="-70" cy="18" r="6" fill="#222"/>`;
+    m+=`<g transform="translate(${p[0]},${p[1]-16+Math.sin(lt*30)*1.5}) rotate(${pr>0.001?ang:180})">${tr}</g>`;
+    s+=G(m,{op:k});
+  }
+  return s+VIG;
+};
+
+// 4. Учёба
+S[4]=(lt,d)=>{
+  const tDoor=at('Потом')-.2; let s='';
+  if(lt<tDoor+.5){
+    let a=`<rect width="${W}" height="${H}" fill="#2a2420"/><rect y="820" width="${W}" height="260" fill="#1d1916"/>`;
+    a+=`<rect x="300" y="90" width="1320" height="520" rx="10" fill="#7a5a3a"/><rect x="320" y="110" width="1280" height="480" fill="${C.green}"/>`;
+    const lines=['x² + y² = r²','∫ eˣ dx = eˣ + C','lim (1 + 1/n)ⁿ = e','aⁿ · aᵐ = aⁿ⁺ᵐ','sin²α + cos²α = 1'];
+    let tt=lt*9; lines.forEach((L,i)=>{const n=Math.floor(clamp(tt-i*7,0,L.length));a+=T(380+(i%2)*600,200+Math.floor(i/2)*130,L.slice(0,n),54,{c:'#e8efe6',f:F_SERIF,w:'normal',a:'start',op:.9})});
+    // парта и ученик со спины
+    a+=`<rect x="420" y="780" width="560" height="26" fill="#5a4330"/><rect x="450" y="806" width="20" height="200" fill="#3a2b1e"/><rect x="930" y="806" width="20" height="200" fill="#3a2b1e"/>`;
+    a+=person(700,1010,1.5,{fill:'#000',arm:-30});
+    // стопка тетрадей
+    const n=Math.floor(clamp(lt/ (at('медалью')+.2) ,0,1)*12);
+    for(let i=0;i<n;i++){const c=['#3f7fc4','#c45a3f','#58a05a','#d1a23c'][i%4];a+=`<rect x="${1250+(i%3)*4}" y="${770-i*24}" width="230" height="22" rx="3" fill="${c}"/><rect x="${1250+(i%3)*4}" y="${770-i*24}" width="230" height="5" fill="#fff" opacity=".35"/>`}
+    a+=`<rect x="1220" y="792" width="300" height="24" fill="#5a4330"/>`;
+    // медаль
+    const tm=at('золотой')-.2, pm=pop(lt,tm,.45);
+    if(lt>tm){a+=`<rect width="${W}" height="${H}" fill="#000" opacity="${.45*seg(lt,tm,tm+.3)}"/>`;
+      let md=`<path d="M-60,-260 L-20,-80 L20,-80 L60,-260Z" fill="#c0392b"/><path d="M-20,-260 L0,-140 L20,-260Z" fill="#2b5aa8"/><circle r="120" fill="url(#goldG)" filter="url(#glow)"/><circle r="92" fill="none" stroke="#b8862a" stroke-width="6"/>`+T(0,30,'1',96,{c:'#8a6216',f:F_SERIF});
+      for(let k=0;k<8;k++){const ang=k*45+lt*40;md+=`<path d="M0,-150 L6,-175 L0,-200 L-6,-175Z" fill="#fff6d0" transform="rotate(${ang})" opacity="${.5+.5*Math.sin(lt*6+k)}"/>`}
+      a+=G(md+T(0,190,'ЗОЛОТАЯ МЕДАЛЬ',44,{c:C.gold,ls:4}),{x:960,y:430,s:pm});}
+    s+=G(a,{op:1-seg(lt,tDoor,tDoor+.5)});
+  }
+  if(lt>tDoor){
+    const k=seg(lt,tDoor,tDoor+.5), o=eio(seg(lt,tDoor+.6,tDoor+2.2));
+    let b=`<rect width="${W}" height="${H}" fill="#151b2b"/><rect x="460" y="120" width="1000" height="960" fill="#2a3350"/>`;
+    for(let i=0;i<4;i++) b+=`<rect x="${500+i*250}" y="250" width="60" height="830" fill="#36416a"/>`;
+    b+=`<rect x="420" y="100" width="1080" height="120" fill="#3a4672"/>`+T(960,180,'ФИНАНСОВЫЙ УНИВЕРСИТЕТ',54,{c:C.paper,f:F_SERIF,ls:3});
+    b+=`<rect x="700" y="420" width="520" height="660" fill="#fff4cf"/><rect x="700" y="420" width="520" height="660" fill="#ffd27a" opacity="${.3+.7*o}" filter="url(#glow)"/>`;
+    b+=`<path d="M700,1080 L${700-400*o},1080 L700,420Z" fill="#ffd27a" opacity="${.18*o}"/>`;
+    const dw=260*(1-o*.85);
+    b+=`<rect x="700" y="420" width="${dw}" height="660" fill="#5a3b26" stroke="#2a1a10" stroke-width="6"/><rect x="${1220-dw}" y="420" width="${dw}" height="660" fill="#5a3b26" stroke="#2a1a10" stroke-width="6"/>`;
+    b+=person(960,1080,1.3*(1+o*.2),{fill:'#000',arm:70});
+    s+=G(cam(b,lerp(1,1.15,seg(lt,tDoor,d))),{op:k});
+  }
+  return s+VIG;
+};
+
+// 5. Жизнь в кадре
+S[5]=(lt,d)=>{
+  const pz=eio(seg(lt,0,1.4)); const sc=lerp(.42,1.25,pz);
+  let room=`<rect width="${W}" height="${H}" fill="#f1e3c8"/><rect y="760" width="${W}" height="320" fill="#d6c19c"/>`;
+  room+=`<rect x="1260" y="160" width="420" height="300" rx="10" fill="#cfe7f2" stroke="#fff" stroke-width="16"/><rect x="200" y="520" width="520" height="40" fill="#b07a4a"/>`;
+  room+=`<circle cx="460" cy="380" r="90" fill="#f7b267" opacity=".5"/>`;
+  room+=person(640,920,1.7,{fill:'#2b3550',arm:-25})+person(1000,920,1.7,{fill:'#38465f',arm:-10,flip:1});
+  // камера на штативе
+  room+=`<path d="M1400,920 L1460,700 L1520,920 M1460,700 L1460,920" stroke="#222" stroke-width="8"/><rect x="1400" y="630" width="130" height="80" rx="10" fill="#20242d"/><circle cx="1400" cy="670" r="26" fill="#3b4250"/><circle cx="1510" cy="648" r="9" fill="${C.red}" opacity="${Math.sin(lt*6)>0?1:.25}"/>`;
+  // иконки быстрой нарезкой
+  const t1=at('Обзоры')-.15,t2=at('Рецепты')-.15,t3=at('Лайфхаки')-.15,t4=at('Проекты');
+  let ic='';
+  if(lt>t1&&lt<t2) ic=`<circle r="150" fill="#fff"/><path d="M0,-90 L26,-28 L92,-28 L38,12 L58,78 L0,38 L-58,78 L-38,12 L-92,-28 L-26,-28Z" fill="#f2c14e"/>`+T(0,230,'ОБЗОРЫ',64,{c:'#1d2433'});
+  if(lt>t2&&lt<t3){const fl=Math.abs(Math.sin((lt-t2)*5))*90;ic=`<circle r="150" fill="#fff"/><ellipse cx="-10" cy="${30-fl}" rx="70" ry="${16}" fill="#f0b45a" transform="rotate(${(lt-t2)*500} -10 ${30-fl})"/><ellipse cx="-10" cy="40" rx="92" ry="22" fill="#2b2b2b"/><rect x="80" y="30" width="110" height="18" rx="8" fill="#2b2b2b"/>`+T(0,230,'РЕЦЕПТЫ',64,{c:'#1d2433'})}
+  if(lt>t3&&lt<t4+.6) ic=`<circle r="150" fill="#fff"/><circle cy="-20" r="62" fill="#ffe066" filter="url(#glow)"/><rect x="-28" y="40" width="56" height="40" rx="6" fill="#888"/>`+T(0,230,'ЛАЙФХАКИ',64,{c:'#1d2433'});
+  const tc=[t1,t2,t3].filter(x=>lt>x).pop()||0;
+  if(ic) room+=G(ic,{x:960,y:330,s:pop(lt,tc,.25)});
+  // стикеры проектов
+  const ta=at('«Погнали')-.1,tb=at('«Сто')-.1;
+  room+=G(card(0,0,620,110,'«ПОГНАЛИ ПРИГОТОВИМ»',50,{bg:'#ffde59',f:F_SANS}),{x:620,y:330,s:pop(lt,ta,.3),r:-6});
+  room+=G(card(0,0,520,110,'«СТО ОДНО ДЕЛО»',50,{bg:'#7ee0c3',f:F_SANS}),{x:1300,y:470,s:pop(lt,tb,.3),r:5});
+  // телефон «раскрывается»
+  let s=`<rect width="${W}" height="${H}" fill="#2a1f3d"/>`;
+  s+=`<g transform="translate(960,540) scale(${sc}) translate(-960,-540)">`+
+     `<rect x="-60" y="-80" width="${W+120}" height="${H+160}" rx="120" fill="#0b0b10"/>`+
+     `<defs><clipPath id="scr"><rect x="0" y="0" width="${W}" height="${H}" rx="${60*(1-pz)}"/></clipPath></defs><g clip-path="url(#scr)">${room}</g>`+
+     `<rect x="${W/2-120}" y="-40" width="240" height="26" rx="13" fill="#000" opacity="${1-pz}"/></g>`;
+  // таймлайн-интерфейс видео
+  s+=`<g opacity=".9"><rect x="60" y="1030" width="1800" height="8" rx="4" fill="#fff" opacity=".35"/><rect x="60" y="1030" width="${1800*lt/d}" height="8" rx="4" fill="${C.red}"/><circle cx="${60+1800*lt/d}" cy="1034" r="12" fill="${C.red}"/></g>`;
+  return s;
+};
+
+// 6. Свой канал
+S[6]=(lt,d)=>{
+  const ve=vEnd();
+  let s=`<rect width="${W}" height="${H}" fill="#06080f"/>`;
+  s+=`<ellipse cx="960" cy="480" rx="900" ry="520" fill="#4a6cff" opacity=".10" filter="url(#blur20)"/>`;
+  // монитор
+  s+=`<rect x="420" y="120" width="1080" height="640" rx="20" fill="#0f1320" stroke="#2a3048" stroke-width="10"/><rect x="900" y="760" width="120" height="90" fill="#1a1f30"/><rect x="800" y="840" width="320" height="22" rx="8" fill="#1a1f30"/>`;
+  const tClick=at('появляется')+.2;
+  let scr=`<rect x="440" y="140" width="1040" height="600" fill="#151a28"/><rect x="440" y="140" width="1040" height="70" fill="#1d2335"/><circle cx="490" cy="175" r="12" fill="${C.red}"/>`+T(520,186,'YouTube Studio',28,{a:'start',c:'#c9cfdc',w:'normal'});
+  if(lt<tClick){
+    const pressed=lt>tClick-.25;
+    scr+=`<rect x="760" y="${pressed?402:396}" width="400" height="96" rx="48" fill="${pressed?'#b72d2d':C.red}"/>`+T(960,462,'СОЗДАТЬ КАНАЛ',36,{c:'#fff'});
+    const cp=eio(seg(lt,.8,tClick-.3)); const cx=lerp(1300,980,cp),cy=lerp(660,460,cp);
+    scr+=`<path d="M${cx},${cy} l0,44 l12,-12 l10,22 l8,-4 l-10,-22 l18,0Z" fill="#fff" stroke="#000" stroke-width="2"/>`;
+  } else {
+    scr+=`<circle cx="620" cy="330" r="90" fill="#2f3a57"/><circle cx="620" cy="300" r="34" fill="#4a5679"/><path d="M560,380 Q620,330 680,380" fill="#4a5679"/>`;
+    scr+=T(750,310,'Дима Масленников',56,{a:'start',c:'#fff'})+T(750,360,'канал создан · 9 марта 2014',28,{a:'start',c:C.dim,w:'normal'});
+    const steps=[0,1,3,4,7,9,12]; const k=Math.floor(clamp((lt-tClick)/(ve+.5-tClick),0,.999)*steps.length);
+    const n=steps[k];
+    scr+=`<rect x="540" y="470" width="840" height="200" rx="16" fill="#1d2335"/>`+T(600,540,'ПОДПИСЧИКИ',30,{a:'start',c:C.dim,ls:4})+T(600,640,String(n),96,{a:'start',c:'#fff',f:F_MONO});
+    scr+=`<polyline points="${Array.from({length:12},(_,i)=>`${900+i*40},${640-Math.min(i,k*1.8)*6-(i%2)*4}`).join(' ')}" fill="none" stroke="${C.warm}" stroke-width="4"/>`;
+  }
+  s+=scr;
+  // календарь
+  const pc=pop(lt,.3), oc=1-seg(lt,at('появляется')-.4,at('появляется'));
+  s+=G(`<rect x="-180" y="-130" width="360" height="260" rx="18" fill="${C.paper}"/><rect x="-180" y="-130" width="360" height="70" rx="18" fill="#c0392b"/><rect x="-180" y="-80" width="360" height="20" fill="#c0392b"/>`+T(0,-82,'МАРТ 2014',32,{c:'#fff',ls:4})+T(0,80,'9',140,{c:C.ink,f:F_SERIF}),{x:960,y:430,s:pc,op:oc});
+  // силуэт со спины, задумчиво
+  s+=`<g opacity=".97"><circle cx="${960+Math.sin(lt*.7)*4}" cy="880" r="70" fill="#000"/><path d="M780,1080 Q790,950 960,940 Q1130,950 1140,1080Z" fill="#000"/></g>`;
+  // экран гаснет (пауза)
+  s+=`<rect width="${W}" height="${H}" fill="#000" opacity="${eio(seg(lt,ve+.4,d))}"/>`;
+  return s+VIG;
+};
+
+// 7. Поворот: 2016, шапочка → фонарик → логотип
+S[7]=(lt,d)=>{
+  const tF=at('нужно')-.1, tG=at('ГостБастер')-.25;
+  let s=`<rect width="${W}" height="${H}" fill="#05070d"/>`;
+  s+=G(T(0,0,'2016',220,{f:F_SERIF,c:'#1c2846'}),{x:960,y:330,s:pop(lt,.1,.4),op:1-seg(lt,tG-.5,tG)});
+  // шапочка летит вверх и падает
+  const up=eout(seg(lt,at('Университет')-.2,at('Университет')+1.3)), down=ein(seg(lt,at('Университет')+1.3,tF));
+  const y=lerp(lerp(820,260,up),640,down), rot=lt*220;
+  const capOp=1-seg(lt,tF-.1,tF+.3);
+  s+=G(`<path d="M-120,0 L0,-50 L120,0 L0,50Z" fill="#141414" stroke="#3b3b3b" stroke-width="3"/><path d="M-60,22 L-60,60 Q0,90 60,60 L60,22" fill="#141414"/><path d="M0,0 L80,30 L80,80" stroke="${C.gold}" stroke-width="5" fill="none"/><circle cx="80" cy="86" r="10" fill="${C.gold}"/>`,{x:960,y,r:rot,op:capOp});
+  // фонарик
+  const fo=seg(lt,tF,tF+.4);
+  const torch=`<rect x="-80" y="-22" width="150" height="44" rx="10" fill="#2a2f3a"/><rect x="70" y="-34" width="34" height="68" rx="8" fill="#3a404d"/><rect x="100" y="-30" width="10" height="60" fill="${lt>tG?C.warm:'#666'}"/><rect x="-40" y="-26" width="18" height="10" rx="3" fill="#555"/>`;
+  s+=G(torch,{x:600,y:640,op:fo,s:1.2});
+  if(lt>tG){
+    const bo=seg(lt,tG,tG+.15);
+    s+=`<defs><mask id="m7"><rect width="${W}" height="${H}" fill="#000"/><path d="M732,640 L1920,180 L1920,1100Z" fill="#fff" filter="url(#blur20)"/></mask></defs>`;
+    s+=beam(732,640,0,1300,440,bo*.8);
+    s+=`<g mask="url(#m7)" opacity="${bo}">`+T(1290,600,'GHOSTBUSTER',104,{f:F_SERIF,c:'#f4ecd8',ls:3,extra:`transform="rotate(-2 1290 600)"`})+
+      T(1290,690,'«ОХОТНИК ЗА ПРИВИДЕНИЯМИ»',46,{c:C.warm,ls:4})+`</g>`;
+    s+=dust(lt,5,30,1300,640,400);
+  }
+  // удар: вспышка
+  s+=`<rect width="${W}" height="${H}" fill="#fff" opacity="${.5*(1-seg(lt,tG,tG+.25))*(lt>tG?1:0)}"/>`;
+  return s+VIG;
+};
+
+// 8. Первая ночь
+S[8]=(lt,d)=>{
+  const ve=vEnd();
+  const tA=at('Заброшенное')-.1,tB=at('Фонарик')-.1,tC=at('Камера')-.1,tQ=at('И');
+  let w=`<rect width="${W}" height="${H}" fill="url(#nightSky)"/>${stars(8,80,500,.6)}<circle cx="300" cy="180" r="44" fill="#e9e6da" opacity=".7"/>`;
+  // дом
+  const ho=seg(lt,tA,tA+.8);
+  let hs=`<rect x="560" y="300" width="800" height="560" fill="#141a28"/><path d="M520,300 L960,90 L1400,300Z" fill="#0b0f19"/>`;
+  [[640,380],[1120,380],[640,600],[1120,600]].forEach(([x,y])=>{hs+=`<rect x="${x}" y="${y}" width="160" height="150" fill="#05070c"/><path d="M${x-10},${y+30} L${x+170},${y+60} M${x-10},${y+100} L${x+170},${y+80}" stroke="#4b3b2b" stroke-width="18"/>`});
+  hs+=`<rect x="880" y="580" width="160" height="280" fill="#020306"/>`;
+  w+=G(hs,{op:ho});
+  // калитка и забор
+  let fence='';for(let x=0;x<W;x+=46){if(x>820&&x<1100)continue;fence+=`<rect x="${x}" y="800" width="16" height="200" fill="#090c14"/>`}
+  fence+=`<rect y="830" width="${W}" height="12" fill="#090c14"/><rect y="940" width="${W}" height="12" fill="#090c14"/>`;
+  fence+=`<g transform="rotate(${-25*eio(seg(lt,tA,tA+2))} 830 900)"><rect x="830" y="790" width="130" height="210" fill="none" stroke="#5a3a22" stroke-width="10"/><path d="M830,790 L960,1000 M895,790 V1000" stroke="#5a3a22" stroke-width="7"/></g>`;
+  w+=`<rect y="980" width="${W}" height="100" fill="#07090f"/>`+G(fence,{op:ho});
+  // силуэт в дверном проёме с фонариком
+  const po=seg(lt,tB,tB+.5); const jit=Math.sin(lt*37)*1.6+Math.sin(lt*23)*1.2;
+  let s=cam(w,lerp(1,1.35,eio(seg(lt,tA,ve))),960,700);
+  if(lt>tB){s+=beam(1020,640,-12+jit,900,260,po*.85);}
+  s+=G(person(0,0,1.9,{fill:'#000',hood:1,arm:-12+jit,torch:1,torchOn:lt>tB}),{x:960,y:1000,op:po});
+  if(lt>tC) s+=`<circle cx="160" cy="120" r="${16}" fill="${C.red}" opacity="${Math.sin(lt*7)>0?1:.2}"/>`+T(200,134,'REC',40,{a:'start',c:'#fff',f:F_MONO,op:.9});
+  // слова по одному
+  const wl=[['НОЧЬ.',at('Ночь')],['ЗАБРОШЕННОЕ ЗДАНИЕ.',tA],['ФОНАРИК.',tB],['КАМЕРА.',tC]];
+  let cur=wl.filter(x=>lt>=x[1]-.05).pop();
+  if(cur&&lt<tQ) s+=G(T(0,0,cur[0],110,{f:F_SERIF,c:'#f4ecd8',extra:'filter="url(#shadow)"'}),{x:960,y:240,s:lerp(1.1,1,seg(lt,cur[1],cur[1]+.3)),op:seg(lt,cur[1]-.05,cur[1]+.15)});
+  // резкий обрыв: полсекунды тишины и темноты
+  if(lt>ve+.05) s+=`<rect width="${W}" height="${H}" fill="#000"/>`;
+  return s+VIG;
+};
+
+// 9. Места
+S[9]=(lt,d)=>{
+  const tE=at('Едет')-.2; let s='';
+  const mapEnd=1.6;
+  if(lt<tE+.6){
+    let a=`<rect width="${W}" height="${H}" fill="#0a0e18"/>`;
+    // особняк: «дача Эльзы»
+    a+=`<rect y="860" width="${W}" height="220" fill="#0f140f"/><path d="M0,860 Q300,700 600,820 T1200,800 T1920,760 V860Z" fill="#141c18"/>`;
+    let m=`<rect x="520" y="380" width="880" height="480" fill="#2b2622"/><path d="M480,380 L700,240 L1220,240 L1440,380Z" fill="#1b1714"/><path d="M1180,240 L1260,320 L1220,380 L1440,380 L1300,280Z" fill="#0a0e18"/>`;
+    m+=`<rect x="900" y="180" width="120" height="200" fill="#2b2622"/><path d="M880,180 L960,120 L1040,180Z" fill="#1b1714"/>`;
+    [[580,460],[760,460],[1100,460],[1260,460],[580,640],[1260,640]].forEach(([x,y],i)=>{m+=`<path d="M${x},${y+120} V${y+30} Q${x+50},${y-20} ${x+100},${y+30} V${y+120}Z" fill="#06080c"/>`});
+    m+=`<path d="M860,860 V620 Q960,540 1060,620 V860Z" fill="#06080c"/><path d="M1300,860 L1340,700 L1400,760 L1400,860Z" fill="#0a0e18"/>`;
+    m+=`<path d="M560,520 L620,560 L600,600 M1350,420 L1320,470" stroke="#0a0e18" stroke-width="6" fill="none"/>`;
+    a+=cam(m,lerp(1,1.12,seg(lt,0,tE)),960,600);
+    a+=G(`<rect x="-150" y="-40" width="300" height="80" fill="#c9b48c" stroke="#5a4a30" stroke-width="5"/>`+T(0,14,'ДАЧА ЭЛЬЗЫ',36,{c:'#3a2a18',f:F_SERIF}),{x:1560,y:820,s:pop(lt,at('«дачей')-.3),r:-4});
+    a+=card(300,140,420,80,'ПЯТИГОРСК',40,{bg:'#0e1424',c:C.warm,st:C.warm});
+    s+=G(a,{op:1-seg(lt,tE,tE+.6)});
+  }
+  if(lt>tE){
+    const k=seg(lt,tE,tE+.6);
+    let b=`<rect width="${W}" height="${H}" fill="#0b0f1a"/><circle cx="1500" cy="220" r="70" fill="#e9e6da" opacity=".75"/>`;
+    b+=`<path d="M420,1080 L620,640 L760,600 L880,660 L1020,620 L1180,700 L1320,1080Z" fill="#1a1f2b"/>`;
+    let c=`<rect x="700" y="420" width="420" height="240" fill="#262c3b"/><rect x="660" y="300" width="110" height="360" fill="#2d3445"/><path d="M650,300 L715,190 L780,300Z" fill="#171b26"/><rect x="1040" y="340" width="100" height="320" fill="#2d3445"/><path d="M1030,340 L1090,240 L1150,340Z" fill="#171b26"/>`;
+    for(let x=700;x<1120;x+=40)c+=`<rect x="${x}" y="400" width="24" height="24" fill="#262c3b"/>`;
+    c+=`<rect x="880" y="520" width="50" height="70" fill="#ffd27a" opacity="${.3+.3*Math.sin(lt*3)}"/><rect x="690" y="380" width="30" height="50" fill="#05070c"/><rect x="1075" y="400" width="30" height="50" fill="#05070c"/>`;
+    b+=cam(c,lerp(1,1.1,seg(lt,tE,d)),920,520);
+    // туман
+    for(let i=0;i<6;i++){const x=((lt*40*(i%2?1:-1)+i*400)%2400+2400)%2400-300;b+=`<ellipse cx="${x}" cy="${760+i*40}" rx="520" ry="90" fill="#aab8d0" opacity=".14" filter="url(#blur20)"/>`}
+    b+=`<rect y="600" width="${W}" height="480" fill="url(#fogG)"/>`;
+    b+=card(300,140,560,80,'ЧЕХИЯ · ЗАМОК ГОУСКА',38,{bg:'#0e1424',c:C.warm,st:C.warm});
+    const tS=at('самым')-.2;
+    const jx=Math.sin(lt*53)*4,jy=Math.cos(lt*41)*3;
+    b+=G(T(0,0,'САМОЕ СТРАШНОЕ МЕСТО НА ЗЕМЛЕ',66,{f:F_SERIF,c:'#f1e9d6',extra:'filter="url(#shadow)"'}),{x:960+jx,y:930+jy,op:seg(lt,tS,tS+.3)});
+    s+=G(b,{op:k});
+  }
+  // короткая карта в начале
+  if(lt<mapEnd+.4){
+    let mp=`<rect width="${W}" height="${H}" fill="#0c1426"/><path d="M200,200 C500,120 900,180 1200,150 C1500,130 1700,220 1800,300 L1780,860 C1400,900 1000,820 600,880 C400,900 260,840 180,760Z" fill="#17233f" stroke="#2c3d63" stroke-width="4"/>`;
+    const p1=pop(lt,.15),p2=pop(lt,.55);
+    mp+=G(`<circle r="16" fill="${C.warm}" filter="url(#glow)"/>`+T(0,64,'Пятигорск',40,{c:C.paper,w:'normal'}),{x:1320,y:720,s:p1});
+    mp+=G(`<circle r="16" fill="${C.warm}" filter="url(#glow)"/>`+T(0,64,'Чехия',40,{c:C.paper,w:'normal'}),{x:560,y:360,s:p2});
+    s+=G(mp,{op:1-seg(lt,mapEnd,mapEnd+.4)});
+  }
+  return s+VIG;
+};
+
+// 10. Мем
+S[10]=(lt,d)=>{
+  const ve=vEnd(); const tl=Math.min(lt,ve+.2); // после речи всё замирает
+  const frozen=lt>ve+.2;
+  let s=`<rect width="${W}" height="${H}" fill="#0b0f1c"/>`;
+  const cols=6,rows=4; const cw=W/cols,ch=(H-160)/rows; const r=rng(21);
+  const n=Math.floor(eio(seg(tl,.3,ve-1))*cols*rows*1.0)+1;
+  const order=[...Array(cols*rows).keys()].sort((a,b)=>Math.abs(a%cols-2.5)+Math.abs(Math.floor(a/cols)-1.5)-(Math.abs(b%cols-2.5)+Math.abs(Math.floor(b/cols)-1.5)));
+  for(let k=0;k<Math.min(n,order.length);k++){
+    const i=order[k], cx=(i%cols)*cw+cw/2, cy=160+Math.floor(i/cols)*ch+ch/2, typ=i%3;
+    const tAppear=.3+k*(ve-1.3)/(cols*rows), sc=pop(tl,tAppear,.3);
+    let it='';
+    if(typ===0) it=`<rect x="-80" y="-110" width="160" height="220" rx="20" fill="#11151f" stroke="#3a4157" stroke-width="5"/><rect x="-68" y="-92" width="136" height="184" rx="8" fill="#1d2640"/>`+T(0,-20,'ЗДЕСЬ',22,{c:'#fff'})+T(0,8,'КТО-НИБУДЬ',22,{c:'#fff'})+T(0,36,'ЕСТЬ?',22,{c:C.warm})+`<circle cx="0" cy="70" r="10" fill="${C.red}"/>`;
+    if(typ===1) it=`<path d="M-130,-60 h260 a20,20 0 0 1 20,20 v70 a20,20 0 0 1 -20,20 h-200 l-40,34 v-34 h-20 a20,20 0 0 1 -20,-20 v-70 a20,20 0 0 1 20,-20Z" fill="#2c6bed"/>`+T(0,6,'Здесь кто-нибудь есть?',22,{c:'#fff',w:'normal'})+T(110,46,'😂 '+(1+Math.floor(r()*99))+'K',18,{c:'#cfe0ff',w:'normal'});
+    if(typ===2) it=`<path d="M-110,-80 L-50,-100 Q0,-70 50,-100 L110,-80 L140,-20 L95,0 L95,100 L-95,100 L-95,0 L-140,-20Z" fill="${['#e9e3d4','#1b1b1b','#c94b3b'][i%3]}"/>`+T(0,10,'ЗДЕСЬ КТО-НИБУДЬ',18,{c:i%3===0?'#111':'#fff'})+T(0,36,'ЕСТЬ?',24,{c:i%3===0?'#111':C.warm});
+    s+=G(it,{x:cx,y:cy,s:sc*1.0,r:(r()-.5)*10});
+  }
+  // счётчик просмотров
+  const v=Math.floor(Math.pow(10,lerp(3,8.9,eio(seg(tl,.2,ve)))));
+  s+=`<rect x="0" y="0" width="${W}" height="130" fill="#05070c" opacity=".9"/>`+T(80,88,'ПРОСМОТРЫ',38,{a:'start',c:C.dim,ls:6})+T(1840,96,v.toLocaleString('ru-RU'),80,{a:'end',c:frozen?'#fff':C.warm,f:F_MONO});
+  // уведомления
+  if(!frozen){for(let i=0;i<4;i++){const ph=(lt*1.3+i*.25)%1;s+=G(`<rect x="-200" y="-36" width="400" height="72" rx="18" fill="#fff" opacity=".95"/><circle cx="-160" cy="0" r="20" fill="${C.red}"/>`+T(20,10,'+1 новое упоминание',22,{c:'#222',w:'normal'}),{x:1620,y:lerp(1100,700,ph)-i*20,op:Math.sin(ph*Math.PI)})}}
+  if(frozen) s+=`<rect width="${W}" height="${H}" fill="#000" opacity="${.55*seg(lt,ve+.2,ve+.8)}"/>`;
+  return s+VIG;
+};
+
+// 11. Новые форматы
+S[11]=(lt,d)=>{
+  const tTV=at('телевидение')-.4; let s='';
+  if(lt<tTV+.6){
+    let a=`<rect width="${W}" height="${H}" fill="#1a1408"/><circle cx="960" cy="560" r="600" fill="#5a3f10" opacity=".35" filter="url(#blur20)"/>`;
+    a+=G(T(0,0,'2017',120,{f:F_SERIF,c:'#c99a3a'}),{x:960,y:200,s:pop(lt,at('семнадцатом')-.3)});
+    const td=at('появляется')-.2, fall=ein(seg(lt,td,td+.7));
+    if(lt<td+.7) a+=`<path d="M0,-60 C30,-10 44,20 44,40 a44,44 0 0 1 -88,0 C-44,20 -30,-10 0,-60Z" fill="#f2b632" transform="translate(960,${lerp(-80,540,fall)})" filter="url(#glow)"/>`;
+    else{const sp=seg(lt,td+.7,td+1.2);for(let i=0;i<10;i++){const an=i*36*Math.PI/180;a+=`<circle cx="${960+Math.cos(an)*300*eout(sp)}" cy="${560+Math.sin(an)*120*eout(sp)}" r="${14*(1-sp)}" fill="#f2b632"/>`}
+      a+=`<ellipse cx="960" cy="580" rx="${360*eout(sp)}" ry="${50*eout(sp)}" fill="#f2b632" opacity=".5"/>`;
+      a+=G(T(0,0,'«ВСЁ ПО МАСЛУ»',130,{f:F_SERIF,c:'#ffd56b',extra:'filter="url(#glow)"'}),{x:960,y:560,s:pop(lt,td+.75,.4)});}
+    s+=G(a,{op:1-seg(lt,tTV,tTV+.6)});
+  }
+  if(lt>tTV){
+    const k=seg(lt,tTV,tTV+.6);
+    let st=`<rect width="${W}" height="${H}" fill="#0c0a18"/>`;
+    for(let i=0;i<4;i++){const x=300+i*440,sw=Math.sin(lt*.8+i)*80;st+=`<path d="M${x},-20 L${960+sw-180+i*120},1000 L${960+sw-60+i*120},1000Z" fill="#fff6d8" opacity=".09"/>`}
+    st+=`<ellipse cx="960" cy="950" rx="420" ry="60" fill="#fff6d8" opacity=".25"/>`+person(960,960,2.3,{fill:'#000',arm:20,mic:1});
+    // телевизор
+    const z=lerp(.6,1,eout(seg(lt,tTV,tTV+1)));
+    let tv=`<g transform="translate(960,540) scale(${z}) translate(-960,-540)"><rect x="-40" y="-40" width="${W+80}" height="${H+80}" rx="40" fill="none" stroke="#1d1d24" stroke-width="${120*(1.2-z)+40}"/></g>`;
+    let b=st+tv;
+    const tc1=at('«Чёрный')-.2,tc2=at('«Импровизации')-.3;
+    b+=G(card(0,0,520,170,'',10,{bg:'#0a0a0a',st:'#fff'})+T(0,-10,'ЧЁРНЫЙ СПИСОК',52,{c:'#fff',f:F_SERIF})+T(0,46,'весна 2022 · «Пятница»',28,{c:C.dim,w:'normal'}),{x:420,y:300,s:pop(lt,tc1),r:-4});
+    b+=G(card(0,0,520,170,'',10,{bg:'#f5d547',st:'#000'})+T(0,-10,'ИМПРОВИЗАЦИЯ',52,{c:'#111',f:F_SERIF})+T(0,46,'2022',28,{c:'#333',w:'normal'}),{x:1500,y:300,s:pop(lt,tc2),r:4});
+    if(lt>tc1&&lt<tc1+.25||lt>tc2&&lt<tc2+.25) b+=`<rect width="${W}" height="${H}" fill="#fff" opacity=".15"/>`;
+    s+=G(b,{op:k});
+  }
+  return s+VIG;
+};
+
+// 12. Прятки и цифры
+S[12]=(lt,d)=>{
+  const ve=vEnd();
+  const t1=at('пещерах')-.25,t2=at('бункерах')-.25,t3=at('кораблях')-.25,tN=at('апрелю')-.3;
+  let s=`<rect width="${W}" height="${H}" fill="#06080e"/>`;
+  const panel=(i)=>{
+    if(i===0){let c=`<rect width="${W}" height="${H}" fill="#14100c"/>`;const r=rng(4);for(let k=0;k<16;k++){const x=k*130+r()*60,h=120+r()*300;c+=`<path d="M${x-40},0 L${x},${h} L${x+40},0Z" fill="#2c241c"/>`;const h2=60+r()*180;c+=`<path d="M${x+20},${H} L${x+60},${H-h2} L${x+100},${H}Z" fill="#241d16"/>`}
+      c+=`<ellipse cx="960" cy="560" rx="380" ry="260" fill="#000"/>`+beam(700,800,-25,700,180,.6);return c+T(960,130,'ПЕЩЕРЫ',70,{f:F_SERIF,c:'#f4ecd8'});}
+    if(i===1){let c=`<rect width="${W}" height="${H}" fill="#1a1d20"/><rect x="560" y="140" width="800" height="800" rx="30" fill="#3a3f45" stroke="#22262a" stroke-width="20"/><circle cx="960" cy="540" r="250" fill="#4a5058" stroke="#2a2e33" stroke-width="16"/>`;
+      c+=`<g transform="rotate(${(lt-t2)*120} 960 540)"><circle cx="960" cy="540" r="120" fill="none" stroke="#c0392b" stroke-width="22"/><rect x="950" y="400" width="20" height="280" fill="#c0392b"/><rect x="820" y="530" width="280" height="20" fill="#c0392b"/></g>`;
+      for(let k=0;k<8;k++){const an=k*45*Math.PI/180;c+=`<circle cx="${960+Math.cos(an)*360}" cy="${540+Math.sin(an)*360}" r="14" fill="#22262a"/>`}return c+T(960,110,'БУНКЕРЫ',70,{f:F_SERIF,c:'#f4ecd8'});}
+    let c=`<rect width="${W}" height="${H}" fill="#0d1622"/><rect y="760" width="${W}" height="320" fill="#0a2030"/>`;
+    c+=`<g transform="rotate(${Math.sin(lt*1.2)*1.5} 960 760)"><path d="M300,640 L1620,640 L1500,820 L420,820Z" fill="#5a2e1c"/><rect x="560" y="460" width="560" height="180" fill="#6b3a24"/><rect x="1180" y="320" width="70" height="320" fill="#4a2616"/>`;
+    for(let k=0;k<6;k++)c+=`<circle cx="${620+k*90}" cy="550" r="22" fill="#1b0f08"/>`;
+    for(let k=0;k<12;k++)c+=`<rect x="${340+k*110}" y="${660+(k%3)*20}" width="${30+k%4*10}" height="${14}" fill="#8a4a24" opacity=".7"/>`;c+=`</g>`;
+    return c+T(960,130,'ПОКИНУТЫЕ КОРАБЛИ',70,{f:F_SERIF,c:'#f4ecd8'});
+  };
+  let idx=-1; if(lt>t1)idx=0; if(lt>t2)idx=1; if(lt>t3)idx=2;
+  if(idx>=0&&lt<tN+.5) s+=G(cam(panel(idx),lerp(1.15,1,eout(seg(lt,[t1,t2,t3][idx],[t1,t2,t3][idx]+.5)))),{op:(1-seg(lt,tN,tN+.5))});
+  if(lt<t1+.2){ // заставка «Экстремальные прятки»
+    s+=G(T(0,-10,'«ЭКСТРЕМАЛЬНЫЕ',96,{f:F_SERIF,c:'#f4ecd8'})+T(0,100,'ПРЯТКИ»',130,{f:F_SERIF,c:C.warm}),{x:960,y:500,s:pop(lt,at('«Экстремальные')-.2),op:1-seg(lt,t1,t1+.2)});
+  }
+  if(lt>tN){
+    const k=seg(lt,tN,tN+.5), cnt=eout(seg(lt,tN+.4,ve-.3));
+    const fade=seg(lt,ve+.4,d-.2); // цифры растворяются, остаётся тёплый свет
+    let n=`<circle cx="960" cy="540" r="${500+200*fade}" fill="url(#warmG)" opacity="${.35+.4*fade}"/>`;
+    const a=Math.round(19800000*cnt/100000)*100000, b=Math.round(3300000000*cnt/1e7)*1e7;
+    n+=G(T(960,380,'≈ '+a.toLocaleString('ru-RU'),130,{f:F_MONO,c:'#fff'})+T(960,450,'ПОДПИСЧИКОВ',40,{c:C.warm,ls:10})+
+         T(960,700,(b.toLocaleString('ru-RU'))+'+',130,{f:F_MONO,c:'#fff'})+T(960,770,'ПРОСМОТРОВ',40,{c:C.warm,ls:10})+T(960,860,'апрель 2026',30,{c:C.dim,w:'normal'}),{op:1-fade,cx:960,cy:540,s:1+fade*.08});
+    if(lt>ve-.3&&lt<ve) n+=`<rect width="${W}" height="${H}" fill="#fff" opacity=".12"/>`;
+    s+=G(n,{op:k});
+  }
+  return s+VIG;
+};
+
+// 13. Сердце
+S[13]=(lt,d)=>{
+  const ve=vEnd();
+  const tK=at('подруга')-.3,tY=at('Больше')-.2,tR=at('Третьего')-.2,tM=at('мае')-.3,tL=at('летом')-.3;
+  let s=`<rect width="${W}" height="${H}" fill="#120d1a"/><circle cx="960" cy="560" r="${700}" fill="url(#warmG)" opacity="${.25+.15*seg(lt,tR,tR+1)}"/>`;
+  // Эйфелева башня — контур
+  if(lt>tM){const eo=seg(lt,tM,tM+1);s+=`<g opacity="${.35*eo}" stroke="${C.warm}" stroke-width="5" fill="none"><path d="M760,960 Q900,700 940,260 L980,260 Q1020,700 1160,960"/><path d="M800,960 Q960,820 1120,960"/><path d="M850,760 H1070 M900,560 H1020 M930,400 H990"/><path d="M960,260 V170"/></g>`;}
+  s+=`<ellipse cx="960" cy="960" rx="760" ry="50" fill="#000" opacity=".5"/>`;
+  // герой слева с мягким лучом
+  s+=beam(560,780,-8,380,90,.35*(1-seg(lt,tK,tK+1.5)));
+  s+=person(560,960,1.9,{fill:'#000',hood:1,arm:lerp(0,40,seg(lt,tK,tK+1.5)),torch:1,torchOn:1});
+  // она
+  const ko=seg(lt,tK,tK+.8);
+  s+=G(person(0,0,1.85,{fill:'#000',hair:1,arm:50,mic:1,flip:1}),{x:1360,y:960,op:ko});
+  // мягкое свечение между ними
+  s+=`<circle cx="960" cy="700" r="${160+30*Math.sin(lt*2)}" fill="url(#warmG)" opacity="${.5*ko}"/>`;
+  // календарь годы
+  if(lt>tY&&lt<tR+.3){const yo=seg(lt,tY,tY+.3)*(1-seg(lt,tR,tR+.3));const yr=2014+Math.floor(clamp((lt-tY)/(tR-tY-.5))*11);
+    s+=G(`<rect x="-190" y="-120" width="380" height="240" rx="18" fill="${C.paper}"/><rect x="-190" y="-120" width="380" height="60" rx="18" fill="#a0405a"/><rect x="-190" y="-80" width="380" height="20" fill="#a0405a"/>`+T(0,-78,'ГОД',28,{c:'#fff',ls:6})+T(0,60,String(yr),100,{c:C.ink,f:F_SERIF}),{x:960,y:330,op:yo})+T(960,520,'10+ ЛЕТ ДРУЖБЫ',50,{c:C.warm,ls:6,op:yo});}
+  if(lt>tK&&lt<tY) s+=T(1360,1030,'Клава Кока',40,{c:C.paper,w:'normal',op:seg(lt,tK+.3,tK+.8)});
+  // кольцо и дата
+  if(lt>tR){const ro=pop(lt,tR+.6,.5);
+    s+=G(`<circle r="60" fill="none" stroke="url(#goldG)" stroke-width="16" filter="url(#glow)"/><path d="M-22,-62 L0,-96 L22,-62Z" fill="#e8f6ff" filter="url(#glow)"/>`,{x:960,y:680,s:ro});
+    s+=G(card(0,0,520,96,'3 АПРЕЛЯ 2026',50,{bg:C.paper,f:F_SERIF}),{x:960,y:240,s:pop(lt,tR),op:1-seg(lt,tM-.2,tM+.2)});}
+  if(lt>tM){s+=G(card(0,0,420,96,'МАЙ 2026',50,{bg:C.paper,f:F_SERIF})+T(0,90,'по сообщениям прессы',30,{c:C.dim,w:'normal'}),{x:960,y:240,s:pop(lt,tM),op:1-seg(lt,tL-.2,tL+.2)});}
+  if(lt>tL){s+=G(card(0,0,1000,110,'ЛЕТО 2026 · «ТЕПЕРЬ МЫ СЕМЬЯ»',46,{bg:C.warm,f:F_SERIF}),{x:960,y:240,s:pop(lt,tL)});}
+  // искры
+  if(lt>tR) s+=dust(lt,9,40,960,640,420);
+  return s+VIG;
+};
+
+// 14. Итог: камера отлетает назад
+S[14]=(lt,d)=>{
+  const p=seg(lt,0,d-.3);
+  let s=`<rect width="${W}" height="${H}" fill="#060912"/>`;
+  // фаза А: уральский городок (зум 3 → 1)
+  const pa=1-seg(p,.22,.32);
+  if(pa>0){let w=`<rect width="${W}" height="${H}" fill="url(#nightSky)"/>${stars(3,120)}<path d="M0,620 L220,380 L380,520 L560,300 L760,540 L960,340 L1180,560 L1380,360 L1600,520 L1760,400 L1920,560 V1080 H0Z" fill="#1b2744"/><rect y="880" width="${W}" height="200" fill="#dfe7f5" opacity=".9"/>`;
+    [[60,880,180,200],[460,880,220,260],[1120,880,200,220],[1560,880,230,250]].forEach((h,i)=>w+=house(h[0],h[1],h[2],h[3],.2,i+5));
+    w+=`<rect x="900" y="660" width="190" height="220" fill="#1a2440"/><rect x="965" y="720" width="60" height="74" fill="#ffd27a" filter="url(#glow)"/>`;
+    s+=G(cam(w,lerp(4,1,eio(seg(p,0,.25))),995,757),{op:pa});}
+  // фаза Б: окно в Москве → город
+  const pb=seg(p,.22,.32)*(1-seg(p,.47,.57));
+  if(pb>0){let w=`<rect width="${W}" height="${H}" fill="#0a1022"/>`;const r=rng(17);
+    for(let x=-40;x<W;x+=150){const h=300+r()*500;w+=`<rect x="${x}" y="${H-h}" width="140" height="${h}" fill="#141c33"/>`;for(let y=H-h+20;y<H;y+=40)for(let xx=x+14;xx<x+130;xx+=30)if(r()<.35)w+=`<rect x="${xx}" y="${y}" width="14" height="20" fill="#f7c86a"/>`}
+    w+=`<path d="M900,${H} L900,420 L960,300 L1020,420 L1020,${H}Z" fill="#1a2440"/><path d="M960,300 V200" stroke="#c0392b" stroke-width="10"/><path d="M945,215 L960,190 L975,215Z" fill="#c0392b"/>`;
+    s+=G(cam(w,lerp(2.4,1,eio(seg(p,.25,.5))),960,600),{op:pb});}
+  // фаза В: тысячи экранов
+  const pc=seg(p,.47,.57)*(1-seg(p,.72,.82));
+  if(pc>0){let w='';const z=lerp(1.6,.6,eio(seg(p,.5,.8)));const r=rng(31);
+    for(let y=-6;y<12;y++)for(let x=-8;x<16;x++){const cx=960+(x-4)*130,cy=540+(y-3)*170;w+=`<rect x="${cx-50}" y="${cy-75}" width="100" height="150" rx="12" fill="#11151f"/><rect x="${cx-42}" y="${cy-65}" width="84" height="130" rx="6" fill="${['#2a4a8a','#8a3a5a','#3a7a6a','#7a6a2a'][Math.floor(r()*4)]}" opacity="${.5+.5*Math.sin(lt*2+x*y)}"/>`}
+    s+=G(cam(w,z),{op:pc});}
+  // фаза Г: карта с огоньками
+  const pd=seg(p,.72,.82);
+  if(pd>0){let w=`<rect width="${W}" height="${H}" fill="#060a16"/><path d="M200,260 C500,160 900,220 1200,190 C1500,170 1700,260 1800,340 L1780,860 C1400,900 1000,820 600,880 C400,900 260,840 180,760Z" fill="#0f1830" stroke="#22335a" stroke-width="4"/>`;
+    const r=rng(41);for(let i=0;i<260;i++){const x=240+r()*1520,y=240+r()*620;const tw=.4+.6*Math.abs(Math.sin(lt*1.5+i));w+=`<circle cx="${x}" cy="${y}" r="${1.5+r()*3}" fill="${C.warm}" opacity="${tw*seg(p,.75+r()*.15,.8+r()*.15)}"/>`}
+    w+=`<circle cx="1320" cy="560" r="12" fill="#fff" filter="url(#glow)"/><circle cx="640" cy="470" r="12" fill="#fff" filter="url(#glow)"/>`;
+    s+=G(cam(w,lerp(1.25,1,eio(seg(p,.75,1)))),{op:pd});}
+  return s+VIG;
+};
+
+// 15. Финал
+S[15]=(lt,d)=>{
+  const vs=TL.voice.filter(v=>v.at>=SC.start-.01);
+  const e1=vs[0].end-SC.start, s2=vs[1].at-SC.start, e2=vs[1].end-SC.start;
+  // коридор
+  let s=`<rect width="${W}" height="${H}" fill="#04060b"/>`;
+  s+=`<path d="M0,0 L760,380 L1160,380 L1920,0Z" fill="#090d16"/><path d="M0,1080 L760,700 L1160,700 L1920,1080Z" fill="#0b0f18"/><path d="M0,0 L760,380 L760,700 L0,1080Z" fill="#070a12"/><path d="M1920,0 L1160,380 L1160,700 L1920,1080Z" fill="#070a12"/><rect x="760" y="380" width="400" height="320" fill="#020306"/>`;
+  for(let k=1;k<5;k++){const f=k/5;s+=`<path d="M${760*f},${380*f} V${1080-380*f}" stroke="#121827" stroke-width="${8*(1-f)+2}"/><path d="M${1920-760*f},${380*f} V${1080-380*f}" stroke="#121827" stroke-width="${8*(1-f)+2}"/>`}
+  // луч поворачивается в сторону
+  const tTurn0=.6,tTurn1=e1+.3;
+  const ang=lerp(-6,20,eio(seg(lt,tTurn0+1.2,tTurn1)));
+  const off=lt>e1+1.0; // фонарик гаснет
+  const flick=lt>e1+.7&&lt<e1+1.0&&Math.sin(lt*80)>0;
+  const gw=seg(lt,e1+.9,e1+1.8); // свет между силуэтами
+  const fin=lt>e2+.6; const fade=seg(lt,d-1.6,d);
+  if(!off&&!flick) s+=beam(830,690,ang,1300,240,.9);
+  const she=seg(lt,tTurn1-.8,tTurn1+.2);
+  if(!off&&!flick) s+=`<defs><mask id="m15"><rect width="${W}" height="${H}" fill="#000"/><g transform="translate(830,690) rotate(${ang})"><path d="M0,-7 L1300,-240 L1300,240 L0,7Z" fill="#fff"/></g></mask></defs>`;
+  // второй силуэт: в луче подсвечен, потом тёплый контур
+  const her=person(0,0,1.9,{fill:'#000',hair:1,arm:60,flip:1});
+  s+=`<circle cx="1180" cy="760" r="${220+gw*120}" fill="url(#warmG)" opacity="${gw*.55}"/>`;
+  s+=`<circle cx="980" cy="740" r="${200+gw*80}" fill="url(#warmG)" opacity="${gw*.5}"/>`;
+  s+=G(her,{x:1380,y:1010,op:Math.max(she*.95,gw)});
+  if(!off&&!flick) s+=`<g mask="url(#m15)">${G(person(0,0,1.9,{fill:'#5a4a33',hair:1,arm:60,flip:1}),{x:1380,y:1010,op:she})}</g>`;
+  s+=person(760,1010,1.9,{fill:'#000',hood:1,arm:ang,torch:1,torchOn:!off&&!flick});
+  // финальный титр
+  if(fin) s+=G(T(0,0,'ЗДЕСЬ КТО-НИБУДЬ ЕСТЬ?',84,{f:F_SERIF,c:'#f4ecd8',ls:2}),{x:960,y:250,op:seg(lt,e2+.6,e2+1.4)});
+  s+=`<rect width="${W}" height="${H}" fill="#000" opacity="${fade}"/>`;
+  return s+VIG;
+};
+
+// =============== СУБТИТРЫ ===============
+const ACC=/^(дима|масленников|гостбастер|клава|кока|москву|усть-катав|пятигорске|гоуска|эльзы|сашей|ютуба|ютуб|финансовый)/i;
+const NUM=/^(двадцать|тысяча|девятьсот|девяносто|четвёртого|девятого|марта|две|тысячи|четырнадцатого|шестнадцатый|семнадцатом|второго|шестого|третьего|апреля|двадцати|двадцать|миллионов|трёх|миллиардов|десяти|золотой|медалью)/i;
+let CHUNKS=[];
+function buildChunks(){
+  for(const v of TL.voice){
+    let cur=[];
+    const flush=()=>{if(cur.length)CHUNKS.push(cur);cur=[]};
+    v.words.forEach((w,i)=>{cur.push(w); const end=/[.?!:…]$/.test(w.w)||/»$/.test(w.w)&&/[.?!]/.test(w.w); const nx=v.words[i+1];
+      const len=cur.map(x=>x.w.length+1).reduce((a,b)=>a+b,0); if(end||len+(nx?nx.w.length:0)>40||(nx&&nx.w==='—')) flush(); if(w.w==='—'){cur.pop();}});
+    flush();
+  }
+  CHUNKS=CHUNKS.map(c=>c.filter(w=>w.w!=='—')).filter(c=>c.length);
+}
+function subs(t){
+  let s='';
+  for(let i=0;i<CHUNKS.length;i++){
+    const c=CHUNKS[i], st=c[0].s-.12, nx=CHUNKS[i+1], en=Math.min(c[c.length-1].e+.5, nx?nx[0].s-.12:1e9);
+    if(t<st||t>en) continue;
+    const op=seg(t,st,st+.12)*(1-seg(t,en-.12,en));
+    let tsp=''; c.forEach(w=>{const lit=t>=w.s-.03; const word=w.w.toUpperCase(); const col=ACC.test(w.w.replace(/[«»]/g,''))?C.warm:(NUM.test(w.w)?'#ffe08a':'#ffffff');
+      tsp+=`<tspan fill="${lit?col:'#9aa3b5'}" fill-opacity="${lit?1:.55}">${esc(word)} </tspan>`});
+    s+=`<g opacity="${op}"><text x="960" y="1000" text-anchor="middle" font-family="${F_SANS}" font-weight="bold" font-size="46" stroke="#000" stroke-width="10" stroke-linejoin="round" paint-order="stroke" letter-spacing="1">${tsp}</text></g>`;
+  }
+  return s;
+}
+
+// =============== КАДР ===============
+const XF=0.45; const CUT=new Set([8,9]); // в сцены 8 и 9 — жёсткая склейка
+function drawScene(sc,T0){SC=sc;const lt=T0-sc.start,d=sc.end-sc.start;return S[sc.id](lt,d)}
+function frame(t){
+  let out=DEFS; const sc=TL.scenes; let i=sc.findIndex(s=>t>=s.start&&t<s.end); if(i<0)i=sc.length-1;
+  const cur=sc[i];
+  if(i>0&&t-cur.start<XF&&!CUT.has(cur.id)){out+=drawScene(sc[i-1],t)+`<g opacity="${eio((t-cur.start)/XF)}">${drawScene(cur,t)}</g>`}
+  else out+=drawScene(cur,t);
+  out+=subs(t);
+  document.getElementById('v').innerHTML=out;
+}
+window.init=(tl)=>{TL=tl;buildChunks();};
+</script></body></html>
