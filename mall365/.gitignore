@@ -1,0 +1,5 @@
+build/frames/
+build/stills/
+build/*.jpg
+build/*.wav
+build/out.mp4
