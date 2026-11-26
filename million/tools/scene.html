@@ -1,0 +1,421 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+html,body{margin:0;padding:0;background:#000;width:1080px;height:1920px;overflow:hidden}
+svg{display:block}
+text{font-family:'Inter','Inter Display',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+</style></head>
+<body><div id="root"></div>
+<script>
+// ======================================================================
+// «Рядом с работой или вдвое дешевле?» — все сцены как функция render(t)
+// ======================================================================
+const W=1080,H=1920;
+let TM=null; // timing.json, injected
+const OR='#22c063', ORD='#14904a', BL='#9b5cff', BLD='#6a32c9', NAVY='#14203f', YEL='#ffd21f', GRN='#3ddc6a', RED='#ff3b3b';
+
+// ---------- easing / helpers ----------
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const eo=t=>1-Math.pow(1-clamp(t),3);
+const eio=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const back=t=>{t=clamp(t);const c1=1.9,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2)};
+// pop scale: 0 -> 1.12 -> 1 over d sec starting at t0
+const pop=(t,t0,d=.28)=>t<t0?0:back((t-t0)/d);
+// stamp: 1.5 -> 1 in .12s
+const stamp=(t,t0)=>t<t0?0:(t-t0>.12?1:lerp(1.6,1,(t-t0)/.12));
+const shake=(t,t0,d=.25,a=12)=>{if(t<t0||t>t0+d)return[0,0];const k=1-(t-t0)/d;return[Math.sin(t*90)*a*k,Math.cos(t*77)*a*k]};
+const fmt=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+function seeded(s){return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+
+// ---------- primitives ----------
+function rays(cx,cy,c1,c2,rot,n=18){
+  let s=`<rect width="${W}" height="${H}" fill="${c1}"/>`;const R=2600;
+  for(let i=0;i<n;i++){const a0=(i/n)*Math.PI*2+rot,a1=a0+Math.PI/n;
+    s+=`<polygon points="${cx},${cy} ${cx+R*Math.cos(a0)},${cy+R*Math.sin(a0)} ${cx+R*Math.cos(a1)},${cy+R*Math.sin(a1)}" fill="${c2}"/>`}
+  return s+`<rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+}
+function navy(){return `<rect width="${W}" height="${H}" fill="${NAVY}"/><rect width="${W}" height="${H}" fill="url(#dots)" opacity=".5"/><rect width="${W}" height="${H}" fill="url(#vig)"/>`}
+function tx(x,y,str,{size=80,fill='#fff',stroke='#000',sw=10,anchor='middle',weight=900,rot=0,cls='',ls=0}={}){
+  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" paint-order="stroke" stroke-linejoin="round" letter-spacing="${ls}" class="${cls}" transform="rotate(${rot} ${x} ${y})">${str}</text>`;
+}
+// tilted sticker plate
+function plate(x,y,w,h,str,{bg='#fff',fg='#000',size=64,rot=-4,sc=1,border='#000',mono=false}={}){
+  if(sc<=0)return'';
+  return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${sc})">
+   <rect x="${-w/2+8}" y="${-h/2+10}" width="${w}" height="${h}" rx="18" fill="#000" opacity=".35"/>
+   <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="18" fill="${bg}" stroke="${border}" stroke-width="8"/>
+   <text x="0" y="${size*.36}" font-size="${size}" font-weight="900" text-anchor="middle" fill="${fg}" class="${mono?'mono':''}">${str}</text></g>`;
+}
+function g(sc,x,y,inner,rot=0){if(sc<=0)return'';return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${sc})">${inner}</g>`}
+
+// ---------- icons ----------
+function house(c,roof){return `<g stroke="#111" stroke-width="10" stroke-linejoin="round">
+ <rect x="-110" y="-60" width="220" height="190" fill="#fff6e8"/><polygon points="-140,-50 0,-170 140,-50" fill="${roof}"/>
+ <rect x="-30" y="40" width="60" height="90" fill="${c}"/><rect x="-85" y="-25" width="50" height="50" fill="#9fd8ff"/><rect x="35" y="-25" width="50" height="50" fill="#9fd8ff"/></g>`}
+function office(c){let s=`<g stroke="#111" stroke-width="10" stroke-linejoin="round"><rect x="-95" y="-230" width="190" height="360" fill="#e9eef7"/>`;
+ for(let r=0;r<5;r++)for(let k=0;k<3;k++)s+=`<rect x="${-70+k*52}" y="${-205+r*62}" width="36" height="40" fill="${(r+k)%3?'#9fd8ff':'#ffe9a0'}" stroke-width="6"/>`;
+ return s+`<rect x="-28" y="70" width="56" height="60" fill="${c}"/></g>`}
+function clockIcon(r=90,h=0,m=0,face='#fff'){const ah=(h%12+m/60)/12*Math.PI*2-Math.PI/2, am=m/60*Math.PI*2-Math.PI/2;
+ return `<g><circle r="${r}" fill="${face}" stroke="#111" stroke-width="12"/>
+ ${[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>{const a=i/12*Math.PI*2;return `<line x1="${Math.cos(a)*r*.78}" y1="${Math.sin(a)*r*.78}" x2="${Math.cos(a)*r*.9}" y2="${Math.sin(a)*r*.9}" stroke="#111" stroke-width="6"/>`}).join('')}
+ <line x1="0" y1="0" x2="${Math.cos(ah)*r*.5}" y2="${Math.sin(ah)*r*.5}" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+ <line x1="0" y1="0" x2="${Math.cos(am)*r*.75}" y2="${Math.sin(am)*r*.75}" stroke="#111" stroke-width="8" stroke-linecap="round"/><circle r="10" fill="#111"/></g>`}
+function phone(w,h,screen){return `<g><rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="40" fill="#1b1b22" stroke="#000" stroke-width="8"/>
+ <rect x="${-w/2+18}" y="${-h/2+40}" width="${w-36}" height="${h-80}" rx="16" fill="#fff"/>${screen}</g>`}
+
+// ---------- characters (chibi) ----------
+// who: 'tema'|'vika'; emo: neutral|happy|smug|shock|sad|tired; mouth 0..1; pose: arm options
+function hero(who,{x=0,y=0,s=1,emo='neutral',mouth=0,blink=false,breathe=0,armL=0,armR=0,flip=false,prop='',hood=null,bounce=0}={}){
+  const T=who==='tema';
+  const hc=hood||(T?OR:BL), hcd=T?ORD:BLD;
+  const skin='#ffd9bd', hair=T?'#2a1f1c':'#7a4426';
+  const by=-bounce;
+  const sy=1+breathe*.015;
+  let body=`<g transform="translate(0 ${by}) scale(1 ${sy})">
+   <!-- legs -->
+   <rect x="-62" y="150" width="50" height="95" rx="18" fill="#283245" stroke="#111" stroke-width="9"/>
+   <rect x="12" y="150" width="50" height="95" rx="18" fill="#283245" stroke="#111" stroke-width="9"/>
+   <ellipse cx="-38" cy="248" rx="42" ry="20" fill="#fff" stroke="#111" stroke-width="9"/><ellipse cx="38" cy="248" rx="42" ry="20" fill="#fff" stroke="#111" stroke-width="9"/>
+   <!-- torso hoodie -->
+   <path d="M-105,170 Q-120,-10 -60,-30 L60,-30 Q120,-10 105,170 Z" fill="${hc}" stroke="#111" stroke-width="10"/>
+   <path d="M-50,90 h100 v50 h-100z" fill="${hcd}" stroke="#111" stroke-width="7" rx="10"/>
+   <text x="0" y="55" font-size="46" font-weight="900" text-anchor="middle" fill="#fff" stroke="#111" stroke-width="5" paint-order="stroke">${T?'Т':'В'}</text>
+   <!-- arms -->
+   <g transform="translate(-92 20) rotate(${30+armL})"><rect x="-26" y="-10" width="52" height="135" rx="26" fill="${hc}" stroke="#111" stroke-width="9"/><circle cx="0" cy="128" r="26" fill="${skin}" stroke="#111" stroke-width="9"/></g>
+   <g transform="translate(92 20) rotate(${-30-armR})"><rect x="-26" y="-10" width="52" height="135" rx="26" fill="${hc}" stroke="#111" stroke-width="9"/><circle cx="0" cy="128" r="26" fill="${skin}" stroke="#111" stroke-width="9"/>${prop?`<g transform="translate(0 150) rotate(${30+armR})">${prop}</g>`:''}</g>
+   <!-- head -->
+   <g transform="translate(0 -170)">
+    ${T?'':`<path d="M-150,-40 Q-175,120 -120,150 Q-150,40 -120,-20Z M150,-40 Q175,120 120,150 Q150,40 120,-20Z" fill="${hair}" stroke="#111" stroke-width="9"/>`}
+    <ellipse cx="0" cy="0" rx="150" ry="140" fill="${skin}" stroke="#111" stroke-width="10"/>
+    ${T?`<path d="M-150,-10 Q-170,-150 -40,-150 L-60,-190 L0,-150 L30,-200 L50,-145 L110,-175 L100,-120 Q170,-90 150,-10 Q120,-80 60,-70 L70,-110 L20,-70 L0,-115 L-30,-70 L-60,-110 L-80,-60 Q-130,-60 -150,-10Z" fill="${hair}" stroke="#111" stroke-width="9" stroke-linejoin="round"/>`
+       :`<path d="M-152,10 Q-170,-160 0,-150 Q170,-160 152,10 Q120,-90 40,-95 Q0,-60 -60,-90 Q-120,-80 -152,10Z" fill="${hair}" stroke="#111" stroke-width="9"/><circle cx="125" cy="-115" r="38" fill="${hair}" stroke="#111" stroke-width="9"/>`}
+    ${face(emo,mouth,blink,T)}
+   </g></g>`;
+  return `<g transform="translate(${x} ${y}) scale(${flip?-s:s} ${s})">${body}</g>`;
+}
+function face(emo,mouth,blink,T){
+  let s='';
+  // blush
+  s+=`<ellipse cx="-95" cy="40" rx="24" ry="14" fill="#ff8f8f" opacity=".6"/><ellipse cx="95" cy="40" rx="24" ry="14" fill="#ff8f8f" opacity=".6"/>`;
+  const ey=-5, ex=55;
+  if(blink){s+=`<path d="M${-ex-24},${ey} q24,10 48,0 M${ex-24},${ey} q24,10 48,0" stroke="#111" stroke-width="9" fill="none" stroke-linecap="round"/>`}
+  else if(emo==='happy'){s+=`<path d="M${-ex-26},${ey+8} q26,-36 52,0 M${ex-26},${ey+8} q26,-36 52,0" stroke="#111" stroke-width="10" fill="none" stroke-linecap="round"/>`}
+  else if(emo==='smug'){s+=`<ellipse cx="${-ex}" cy="${ey}" rx="24" ry="22" fill="#fff" stroke="#111" stroke-width="7"/><ellipse cx="${ex}" cy="${ey}" rx="24" ry="22" fill="#fff" stroke="#111" stroke-width="7"/><circle cx="${-ex+6}" cy="${ey+6}" r="11" fill="#111"/><circle cx="${ex+6}" cy="${ey+6}" r="11" fill="#111"/>
+     <rect x="${-ex-30}" y="${ey-30}" width="60" height="28" fill="#ffd9bd"/><rect x="${ex-30}" y="${ey-30}" width="60" height="28" fill="#ffd9bd"/><line x1="${-ex-28}" y1="${ey-2}" x2="${-ex+28}" y2="${ey-2}" stroke="#111" stroke-width="8"/><line x1="${ex-28}" y1="${ey-2}" x2="${ex+28}" y2="${ey-2}" stroke="#111" stroke-width="8"/>`}
+  else if(emo==='tired'){s+=`<ellipse cx="${-ex}" cy="${ey}" rx="24" ry="22" fill="#fff" stroke="#111" stroke-width="7"/><ellipse cx="${ex}" cy="${ey}" rx="24" ry="22" fill="#fff" stroke="#111" stroke-width="7"/><circle cx="${-ex}" cy="${ey+8}" r="10" fill="#111"/><circle cx="${ex}" cy="${ey+8}" r="10" fill="#111"/>
+     <rect x="${-ex-30}" y="${ey-30}" width="60" height="32" fill="#ffd9bd"/><rect x="${ex-30}" y="${ey-30}" width="60" height="32" fill="#ffd9bd"/><line x1="${-ex-28}" y1="${ey+2}" x2="${-ex+28}" y2="${ey+2}" stroke="#111" stroke-width="8"/><line x1="${ex-28}" y1="${ey+2}" x2="${ex+28}" y2="${ey+2}" stroke="#111" stroke-width="8"/>
+     <path d="M${-ex-22},${ey+30} q22,10 44,0 M${ex-22},${ey+30} q22,10 44,0" stroke="#8a6fb0" stroke-width="6" fill="none"/>`}
+  else{const big=emo==='shock';const r=big?34:24;
+     s+=`<ellipse cx="${-ex}" cy="${ey}" rx="${r}" ry="${r+4}" fill="#fff" stroke="#111" stroke-width="7"/><ellipse cx="${ex}" cy="${ey}" rx="${r}" ry="${r+4}" fill="#fff" stroke="#111" stroke-width="7"/>
+     <circle cx="${-ex}" cy="${ey+2}" r="${big?12:13}" fill="#111"/><circle cx="${ex}" cy="${ey+2}" r="${big?12:13}" fill="#111"/><circle cx="${-ex+5}" cy="${ey-5}" r="4" fill="#fff"/><circle cx="${ex+5}" cy="${ey-5}" r="4" fill="#fff"/>`}
+  // brows
+  if(emo==='sad'||emo==='tired') s+=`<path d="M${-ex-28},${ey-42} l50,-14 M${ex+28},${ey-42} l-50,-14" stroke="#111" stroke-width="8" stroke-linecap="round"/>`;
+  else if(emo==='shock') s+=`<path d="M${-ex-26},${ey-58} q26,-16 52,0 M${ex-26},${ey-58} q26,-16 52,0" stroke="#111" stroke-width="8" fill="none" stroke-linecap="round"/>`;
+  else if(emo==='smug') s+=`<path d="M${-ex-26},${ey-44} l52,6 M${ex-26},${ey-38} l52,-6" stroke="#111" stroke-width="8" stroke-linecap="round"/>`;
+  // mouth
+  const my=62;
+  if(mouth>.15){const oh=10+mouth*44;s+=`<path d="M-38,${my} Q0,${my+oh*1.6} 38,${my} Z" fill="#7a1f2b" stroke="#111" stroke-width="7" stroke-linejoin="round"/><path d="M-18,${my+oh*.9} q18,-12 36,0" fill="#ff7b8a"/>`}
+  else if(emo==='happy'||emo==='smug') s+=`<path d="M-40,${my-4} Q${emo==='smug'?20:0},${my+40} 40,${my-14}" stroke="#111" stroke-width="9" fill="none" stroke-linecap="round"/>`;
+  else if(emo==='sad'||emo==='tired') s+=`<path d="M-28,${my+16} Q0,${my-6} 28,${my+16}" stroke="#111" stroke-width="9" fill="none" stroke-linecap="round"/>`;
+  else if(emo==='shock') s+=`<ellipse cx="0" cy="${my+10}" rx="22" ry="28" fill="#7a1f2b" stroke="#111" stroke-width="7"/>`;
+  else s+=`<path d="M-24,${my+4} Q0,${my+18} 24,${my+4}" stroke="#111" stroke-width="9" fill="none" stroke-linecap="round"/>`;
+  return s;
+}
+const blinkAt=(t,seed)=>{const p=3.1+seed*.7;const ph=(t+seed*1.3)%p;return ph<.1};
+
+// ---------- subtitles ----------
+function subtitles(t,y=1420){
+  y=subY(t);
+  const sub=TM.subs.find(s=>t>=s.s&&t<s.e);if(!sub)return'';
+  const k=clamp((t-sub.s)/.15);const sc=k<1?lerp(.8,1.05,k):(t-sub.s<.25?lerp(1.05,1,(t-sub.s-.15)/.1):1);
+  let parts=sub.words.map(w=>{let c='#fff';const ww=w.w.replace(/[«»]/g,'');
+    if(w.num)c=YEL;if(/^Тём/i.test(ww))c=OR;if(/^Вик/i.test(ww))c=BL;
+    return `<tspan fill="${c}">${ww.toUpperCase()}</tspan>`}).join(' ');
+  const len=sub.words.map(w=>w.w.replace(/[«»]/g,'')).join(' ').length;const fs=Math.min(100,980/(0.70*len));
+  return `<g transform="translate(540 ${y}) scale(${sc})"><text x="0" y="0" font-size="${fs}" font-weight="900" text-anchor="middle" stroke="#000" stroke-width="18" paint-order="stroke" stroke-linejoin="round">${parts}</text></g>`;
+}
+function subY(t){
+  if(t>=TM.lines[10].s) return 1560;
+  if(t>=TM.lines[9].s) return 1500;
+  if(t>=TM.lines[6].s && t<TM.lines[7].s) return 1500;
+  if(t>=TM.lines[2].s && t<TM.lines[3].s) return 1290;
+  return 1420;
+}
+function talkMouth(t){const i=Math.floor(t*30);const e=TM.env[i]||0;return e>.12?clamp(e*1.3):0}
+
+// ---------- scenes: «Миллион сразу или по 3000 каждое утро?» ----------
+// A = зелёный (Тёма, миллион сразу), Б = фиолетовый (Вика, 3000 в день)
+const PU='#9b5cff', PUL='#c49bff', GRL='#5fe08f';
+const L=i=>TM.lines[i].s;
+// start time of the first word in line `li` that begins with `pre` (after index `from`)
+function at(li,pre,from=0){const ws=TM.words.filter(w=>w.line===li);let n=0;
+  for(const w of ws){const c=w.w.replace(/[«»:;,.!?—]/g,'').toLowerCase();if(c.startsWith(pre.toLowerCase())){if(n++>=from)return w.s}}
+  return TM.lines[li].s}
+
+function subY(t){
+  if(t>=L(10)) return 1600;
+  if(t>=L(8) && t<L(9)) return 1560;
+  if(t>=L(2) && t<L(3)) return 1300;
+  return 1440;
+}
+
+// ---- props ----
+function suitcase(){let s=`<g stroke="#111" stroke-width="10" stroke-linejoin="round">
+  <path d="M-60,-150 v-40 a20,20 0 0 1 20,-20 h80 a20,20 0 0 1 20,20 v40" fill="none" stroke-width="16"/>`;
+  for(let i=0;i<5;i++)s+=`<rect x="${-150+i*55}" y="${-190+((i*37)%30)}" width="120" height="60" rx="8" fill="#7fe08f" transform="rotate(${-20+i*10} ${-90+i*55} -160)"/>`;
+  s+=`<rect x="-200" y="-150" width="400" height="260" rx="26" fill="#8a5a2b"/><rect x="-200" y="-30" width="400" height="16" fill="#6b4220"/>
+  <rect x="-30" y="-50" width="60" height="50" rx="8" fill="${YEL}"/></g>`;return s}
+function booth(){return `<g stroke="#111" stroke-width="10" stroke-linejoin="round">
+  <rect x="-220" y="-200" width="440" height="380" fill="#efe6ff"/><rect x="-250" y="-260" width="500" height="80" rx="12" fill="${PU}"/>
+  <text x="0" y="-205" font-size="50" font-weight="900" text-anchor="middle" fill="#fff" stroke="none">КАССА</text>
+  <rect x="-130" y="-120" width="260" height="170" rx="14" fill="#9fd8ff"/><rect x="-160" y="50" width="320" height="40" fill="#cdb8f5"/></g>`}
+function alarmClock(r=90,shk=0){return `<g transform="rotate(${shk})">${clockIcon(r,7,0)}<circle cx="${-r*.75}" cy="${-r*.9}" r="${r*.3}" fill="${RED}" stroke="#111" stroke-width="8"/><circle cx="${r*.75}" cy="${-r*.9}" r="${r*.3}" fill="${RED}" stroke="#111" stroke-width="8"/></g>`}
+function moto(){return `<g stroke="#111" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+  <circle cx="-150" cy="60" r="80" fill="#333"/><circle cx="-150" cy="60" r="32" fill="#bbb"/>
+  <circle cx="160" cy="60" r="80" fill="#333"/><circle cx="160" cy="60" r="32" fill="#bbb"/>
+  <path d="M-150,60 L-60,-40 H80 L160,60" fill="none" stroke-width="16"/>
+  <path d="M-110,-50 Q-60,-120 40,-90 L90,-40 H-90Z" fill="${RED}"/><rect x="-60" y="-80" width="110" height="34" rx="14" fill="#222"/>
+  <path d="M90,-40 L120,-130 M100,-130 h60" fill="none" stroke-width="14"/><circle cx="175" cy="-60" r="22" fill="${YEL}"/></g>`}
+function fire(){return `<g stroke="#111" stroke-width="8" stroke-linejoin="round"><path d="M0,-120 C60,-60 90,-20 70,40 C55,85 -55,85 -70,40 C-90,-20 -30,-40 0,-120Z" fill="#ff6a2b"/><path d="M0,-40 C30,-10 40,10 30,40 C20,60 -20,60 -30,40 C-40,10 -10,-10 0,-40Z" fill="${YEL}" stroke-width="0"/></g>`}
+function snow(t,n=40,seed=3,sp=160){let s='';const r=seeded(seed);for(let i=0;i<n;i++){const x=r()*W,ph=r()*H,sz=4+r()*8;const y=(ph+t*sp*(0.7+r()*.6))%H;s+=`<circle cx="${(x+Math.sin(t*1.5+i)*25+W)%W}" cy="${y}" r="${sz}" fill="#fff" opacity=".9"/>`}return s}
+function rain(t,n=50){let s='';const r=seeded(7);for(let i=0;i<n;i++){const x=r()*W,ph=r()*H;const y=(ph+t*1600)%H;s+=`<line x1="${x}" y1="${y}" x2="${x-14}" y2="${y+50}" stroke="#bfe3ff" stroke-width="5" opacity=".7"/>`}return s}
+function bubble(w,txt,{size=60,fill='#111',tailX=-120,tailDir=1}={}){return `<path d="M${-w/2},-80 h${w} a30,30 0 0 1 30,30 v100 a30,30 0 0 1 -30,30 h${-w/2+tailX+40} l${-40*tailDir},60 l${-10*tailDir+ (tailDir<0?60:0)},-60 h${-(w/2+tailX)} a30,30 0 0 1 -30,-30 v-100 a30,30 0 0 1 30,-30z" fill="#fff" stroke="#111" stroke-width="8"/><text x="0" y="22" font-size="${size}" font-weight="900" text-anchor="middle" fill="${fill}">${txt}</text>`}
+function hudClock(str,col='#fff',x=540,y=150){return `<g transform="translate(${x} ${y})"><rect x="-170" y="-62" width="340" height="124" rx="22" fill="#111" stroke="${col}" stroke-width="6"/><text x="0" y="30" font-size="88" font-weight="800" text-anchor="middle" fill="${col}" class="mono">${str}</text></g>`}
+
+// L0 — карточка А
+function cardA(t,t0){let s=rays(540,860,OR,GRL,(t-t0)*.08);
+  s+=tx(540,250,'ВАРИАНТ А',{size:70,sw:12,rot:-3});
+  s+=g(pop(t,t0+.05,.35),540,880,suitcase());
+  s+=plate(540,1180,760,150,'1 000 000 ₽',{bg:'#fff',size:110,rot:-4,sc:pop(t,t0+.3)});
+  s+=plate(540,620,300,96,'СРАЗУ',{bg:YEL,size:62,rot:5,sc:pop(t,at(0,'сейчас'))});
+  // flying banknotes
+  const r=seeded(11);for(let i=0;i<8;i++){const a=r()*Math.PI*2,sp=200+r()*300,k=clamp((t-t0-.1)*.9);
+    s+=`<g transform="translate(${540+Math.cos(a)*sp*k*2} ${880+Math.sin(a)*sp*k*2}) rotate(${a*60+t*80})" opacity="${1-k*.6}"><rect x="-50" y="-25" width="100" height="50" rx="6" fill="#7fe08f" stroke="#1b6b2e" stroke-width="5"/></g>`}
+  return s}
+// L1 — карточка Б (до «Что выберешь»)
+function cardB(t,t0){const lt=t-t0;let s=rays(540,860,PU,PUL,-lt*.08);
+  s+=tx(540,250,'ВАРИАНТ Б',{size:70,sw:12,rot:3});
+  s+=g(pop(t,t0+.05,.35),540,900,booth());
+  s+=plate(540,1250,700,150,'3 000 ₽ / ДЕНЬ',{bg:'#fff',size:86,rot:4,sc:pop(t,at(1,'три'))});
+  const tc=at(1,'год');
+  if(t>tc) s+=plate(540,420,420,96,'365 ДНЕЙ',{bg:YEL,size:62,rot:-4,sc:pop(t,tc)});
+  const t7=at(1,'семь');
+  if(t>t7){const sh=Math.sin(t*50)*8*(t-t7<.9);s+=g(pop(t,t7),840,620,alarmClock(85,sh));s+=plate(840,780,360,86,'ЛИЧНО 07:00',{bg:YEL,size:50,rot:5,sc:pop(t,t7+.1)})}
+  const tf=at(1,'сгорел');
+  if(t>tf-.4){s+=g(pop(t,tf-.4),230,640,fire());s+=plate(230,800,300,86,'СГОРЕЛ',{bg:RED,fg:'#fff',size:52,rot:-6,sc:stamp(t,tf)})}
+  return s}
+function versusQ(t,t0){const k=eo((t-t0)/.3);
+  let s=`<rect width="${W}" height="${H}" fill="#111"/>`;
+  s+=`<g transform="translate(${lerp(-W,0,k)} 0)"><polygon points="0,0 ${W},0 0,${H}" fill="${OR}"/></g>`;
+  s+=`<g transform="translate(${lerp(W,0,k)} 0)"><polygon points="${W},0 ${W},${H} 0,${H}" fill="${PU}"/></g>`;
+  s+=`<rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+  s+=g(.6*k,270,560,suitcase());s+=g(.55*k,810,1120,booth());
+  s+=tx(270,780,'1 000 000',{size:80,sw:12});s+=tx(810,1360,'3 000 × 365',{size:72,sw:12});
+  const sc=stamp(t,t0+.2);if(sc)s+=`<g transform="translate(540 1040) scale(${sc}) rotate(-8)">${tx(0,0,'?',{size:380,fill:YEL,sw:24})}</g>`;
+  return s}
+// L2 — Тёма хватает чемодан
+function temaGrab(t,t0){const lt=t-t0;
+  let s=`<rect width="${W}" height="${H}" fill="${OR}"/><polygon points="${W},0 ${W},${H} 0,${H} 0,${H*0.78} ${W},${H*0.42}" fill="${PU}"/><rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+  const talk=TM.env[Math.floor(t*30)]>.1;
+  s+=hero('tema',{x:330,y:880,s:.85,emo:lt>3.3?'smug':'happy',mouth:talkMouth(t),blink:blinkAt(t,1)&&!talk,breathe:Math.sin(t*2.5),armL:150,armR:150,bounce:Math.abs(Math.sin(lt*7))*16,
+    prop:''});
+  s+=g(.42,330,450+Math.sin(lt*7)*10,suitcase());
+  s+=g(pop(t,t0+.2),330,180,`<rect x="-230" y="-48" width="460" height="96" rx="14" fill="#111"/><text x="0" y="24" font-size="56" font-weight="900" text-anchor="middle" fill="#fff" class="mono">ДУМАЛ: <tspan fill="${YEL}">0,0</tspan> СЕК</text>`);
+  const tp=at(2,'вставать');
+  s+=g(pop(t,t0+.4),760,520,bubble(380,'МИЛЛИОН!',{size:64,fill:ORD}));
+  if(t>tp) s+=g(pop(t,tp),720,760,bubble(460,'Я ЧТО, ПЕТУХ?',{size:56}));
+  s+=hero('vika',{x:800,y:1660,s:.72,emo:'neutral',blink:blinkAt(t,2),breathe:Math.sin(t*2.5+1)});
+  s+=g(.3,190,1640,booth());
+  return s}
+// L3 — Вика считает
+function vikaCount(t,t0){let s=navy();
+  const calc=`<g transform="rotate(-10)"><rect x="-55" y="-75" width="110" height="150" rx="14" fill="#3b4256" stroke="#111" stroke-width="8"/><rect x="-40" y="-60" width="80" height="34" rx="6" fill="#bff5c8"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${-40+c*28}" y="${-15+r*28}" width="22" height="20" rx="4" fill="#ffd21f"/>`).join('')).join('')}</g>`;
+  s+=hero('vika',{x:210,y:1250,s:.55,emo:t>at(3,'больше')?'happy':'smug',blink:blinkAt(t,2),breathe:Math.sin(t*3),armR:60,prop:calc});
+  s+=tx(540,280,'ВИКА СЧИТАЕТ',{size:86,fill:PUL,sw:12,rot:-3});
+  const row=(y,txt,tt)=>{const k=pop(t,tt);return k?g(k,600,y,`<rect x="-400" y="-80" width="800" height="160" rx="26" fill="#22325f" stroke="#4a64a8" stroke-width="6"/><text x="0" y="32" font-size="92" font-weight="900" text-anchor="middle" fill="#fff">${txt}</text>`):''};
+  s+=row(520,'3 000 ₽',at(3,'три'));
+  s+=row(700,'× 365 дней',at(3,'умножить'));
+  const tr=at(3,'миллион');
+  if(t>tr){const v=lerp(0,1095000,eo((t-tr)/1.2));
+    s+=g(stamp(t,tr),540,930,`<rect x="-470" y="-100" width="940" height="200" rx="30" fill="${YEL}" stroke="#111" stroke-width="10"/><text x="0" y="45" font-size="120" font-weight="900" text-anchor="middle" fill="#111">= ${fmt(v)}</text>`,-3)}
+  const tb=at(3,'больше');
+  if(t>tb) s+=plate(660,1190,560,120,'БОЛЬШЕ МИЛЛИОНА!',{bg:GRN,fg:'#fff',size:58,rot:4,sc:stamp(t,tb)});
+  const sh=shake(t,tr,.25,14);return `<g transform="translate(${sh[0]} ${sh[1]})">${s}</g>`}
+// L4 — вклад Тёмы, спит без будильника
+function temaBank(t,t0){const lt=t-t0;const tsleep=at(4,'никаких');let s='';
+  if(t<tsleep){s+=rays(540,900,OR,GRL,t*.05);
+    // bank building
+    s+=`<g transform="translate(760 820)" stroke="#111" stroke-width="10" stroke-linejoin="round"><polygon points="-260,-180 0,-330 260,-180" fill="#f4f4f4"/>
+      ${[-190,-95,0,95,190].map(x=>`<rect x="${x-26}" y="-170" width="52" height="300" fill="#fff"/>`).join('')}<rect x="-280" y="130" width="560" height="50" fill="#ddd"/>
+      <text x="0" y="-210" font-size="64" font-weight="900" text-anchor="middle" fill="#111" stroke="none">БАНК</text></g>`;
+    s+=hero('tema',{x:300,y:1150,s:.8,emo:'smug',blink:blinkAt(t,1),breathe:Math.sin(t*3),armR:70});
+    const tv=at(4,'вклад');s+=plate(760,1120,460,120,'ВКЛАД 10 %',{bg:'#fff',size:70,rot:-4,sc:pop(t,tv)});
+    const tp=at(4,'сто');
+    if(t>tp-.6){const k=eo((t-(tp-.6))/1);
+      s+=`<g transform="translate(540 380)"><rect x="-300" y="-150" width="600" height="300" rx="24" fill="#111" opacity=".85"/>
+        <polyline points="${[0,1,2,3,4,5].map(i=>`${-250+i*100*k},${100-i*i*8*k}`).join(' ')}" fill="none" stroke="${GRN}" stroke-width="14" stroke-linejoin="round"/>
+        <polygon points="${-250+500*k},${-100*k-10} ${-275+500*k},${-100*k+30} ${-215+500*k},${-100*k+20}" fill="${GRN}"/></g>`;
+      s+=plate(290,620,440,110,'+100 000 ₽',{bg:GRN,fg:'#fff',size:70,rot:3,sc:stamp(t,tp)})}
+  } else { // sleeping, alarm crossed
+    s+=`<rect width="${W}" height="${H}" fill="#ffcf8a"/><rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+    s+=`<rect x="100" y="1150" width="880" height="280" rx="30" fill="#fff" stroke="#111" stroke-width="10"/><rect x="100" y="1080" width="300" height="120" rx="40" fill="#e8fff0" stroke="#111" stroke-width="10"/>`;
+    s+=hero('tema',{x:540,y:1160,s:.8,emo:'tired',blink:true,breathe:Math.sin(t*1.5)*2});
+    s+=`<rect x="0" y="1200" width="${W}" height="0"/>`;
+    for(let i=0;i<3;i++){const k=((t*.8+i/3)%1);s+=tx(720+k*120,700-k*220,'Z',{size:60+i*16,fill:'#fff',sw:8})}
+    const k=pop(t,tsleep);s+=g(k,830,480,alarmClock(90));
+    if(t>tsleep+.4)s+=g(stamp(t,tsleep+.4),830,480,`<line x1="-130" y1="-130" x2="130" y2="130" stroke="${RED}" stroke-width="30" stroke-linecap="round"/><line x1="130" y1="-130" x2="-130" y2="130" stroke="${RED}" stroke-width="30" stroke-linecap="round"/>`);
+    s+=hudClock('12:30','#111',540,170).replace('fill="#111" stroke','fill="#fff" stroke');
+  }
+  return s}
+// L5 — Вика бегает: дождь, мороз, воскресенье, 31 декабря
+function vikaRun(t,t0){const ts=[t0,at(5,'дождь')-.15,at(5,'мороз')-.15,at(5,'воскресенье')-.15,at(5,'тридцать')-.15];
+  let k=0;for(let i=0;i<ts.length;i++)if(t>=ts[i])k=i;
+  const run=Math.sin(t*14);let s='';
+  const bgs=[[PU,PUL],['#4a5a7a','#5c6d91'],['#cfe3f5','#e4f0fb'],[PU,PUL],['#18284d','#22365f']];
+  s+=`<rect width="${W}" height="${H}" fill="${bgs[k][0]}"/><rect x="0" y="1300" width="${W}" height="620" fill="${bgs[k][1]}"/>`;
+  if(k===1)s+=rain(t);
+  if(k===2||k===4)s+=snow(t,k===4?30:50);
+  if(k===4){ // tree
+    s+=`<g transform="translate(830 1050)" stroke="#111" stroke-width="8"><polygon points="0,-360 150,-100 -150,-100" fill="#1e9d50"/><polygon points="0,-250 190,60 -190,60" fill="#1e9d50"/><rect x="-30" y="60" width="60" height="70" fill="#8a5a2b"/>
+      ${[[-60,-150,RED],[70,-60,YEL],[-90,10,BL],[40,-220,YEL]].map(([x,y,c])=>`<circle cx="${x}" cy="${y}" r="20" fill="${c}" opacity="${.6+.4*Math.sin(t*6+x)}"/>`).join('')}
+      <polygon points="0,-400 12,-370 44,-370 18,-350 28,-318 0,-338 -28,-318 -18,-350 -44,-370 -12,-370" fill="${YEL}"/></g>`}
+  if(k===3) s+=g(1,800,560,`<rect x="-150" y="-150" width="300" height="300" rx="24" fill="#fff" stroke="#111" stroke-width="10"/><rect x="-150" y="-150" width="300" height="90" rx="24" fill="${RED}" stroke="#111" stroke-width="10"/><text x="0" y="90" font-size="130" font-weight="900" text-anchor="middle">ВС</text>`,4);
+  const x=k%2?640:440;
+  s+=hero('vika',{x,y:1330+Math.abs(run)*-20,s:.85,emo:k===2?'sad':k===4?'happy':'neutral',blink:blinkAt(t,2),armL:60+run*50,armR:60-run*50,hood:k===2?'#7d4be0':null});
+  if(k===1) s+=`<g transform="translate(${x} ${880+Math.abs(run)*-20})" stroke="#111" stroke-width="8"><path d="M-220,0 A220,160 0 0 1 220,0 Z" fill="${YEL}"/><line x1="0" y1="0" x2="0" y2="200"/></g>`;
+  const lbl=['','ДОЖДЬ','МОРОЗ −25°','ВОСКРЕСЕНЬЕ','31 ДЕКАБРЯ'];
+  if(k>0) s+=plate(k%2?330:760,980,440,110,lbl[k],{bg:'#fff',size:60,rot:k%2?-5:5,sc:pop(t,ts[k])});
+  if(k>0) s+=plate(k%2?330:760,1130,280,100,'+3 000',{bg:GRN,fg:'#fff',size:66,rot:k%2?4:-4,sc:pop(t,ts[k]+.35)});
+  s+=hudClock('07:00',PUL);
+  return s}
+// L6 — проспала, болела: календарь с крестами
+function vikaMiss(t,t0){let s=navy();
+  const tc=at(6,'сгорело'), tm=at(6,'минус');
+  s+=hero('vika',{x:240,y:620,s:.55,emo:'sad',blink:blinkAt(t,2),breathe:Math.sin(t*3),armR:70,prop:`<g transform="rotate(-40)"><rect x="-12" y="-80" width="24" height="120" rx="12" fill="#fff" stroke="#111" stroke-width="6"/><circle cx="0" cy="40" r="20" fill="${RED}" stroke="#111" stroke-width="6"/></g>`});
+  s+=plate(720,330,500,100,'ПРОСПАЛА × 4',{bg:'#fff',size:56,rot:4,sc:pop(t,at(6,'проспала'))});
+  s+=plate(720,480,500,100,'БОЛЕЛА 7 ДНЕЙ',{bg:'#fff',size:56,rot:-3,sc:pop(t,at(6,'болела'))});
+  // calendar 7x5
+  const cx=540,cy=880,cw=120,ch=96;
+  s+=`<rect x="${cx-450}" y="${cy-230}" width="900" height="590" rx="26" fill="#fff" stroke="#111" stroke-width="10"/><rect x="${cx-450}" y="${cy-230}" width="900" height="70" rx="26" fill="${PU}" stroke="#111" stroke-width="10"/>`;
+  const miss=[3,9,16,24,26,27,28,29,30,31,32,13,19,6];
+  const t0c=at(6,'проспала');const span=Math.max(.5,tc-t0c);
+  for(let i=0;i<35;i++){const r=Math.floor(i/7),c=i%7;const x=cx-420+c*cw,y=cy-140+r*ch;
+    s+=`<rect x="${x}" y="${y}" width="${cw-12}" height="${ch-12}" rx="10" fill="#efe9ff"/>`;
+    const j=miss.indexOf(i);if(j>=0){const tt=t0c+j*span/14;if(t>tt){const sc=stamp(t,tt);s+=`<g transform="translate(${x+(cw-12)/2} ${y+(ch-12)/2}) scale(${sc})"><line x1="-30" y1="-30" x2="30" y2="30" stroke="${RED}" stroke-width="14" stroke-linecap="round"/><line x1="30" y1="-30" x2="-30" y2="30" stroke="${RED}" stroke-width="14" stroke-linecap="round"/></g>`}}}
+  if(t>tc) s+=plate(540,1320,560,110,'14 ДНЕЙ СГОРЕЛО',{bg:'#fff',fg:RED,size:58,rot:3,sc:pop(t,tc)});
+  if(t>tm) s+=g(stamp(t,tm),540,1630,`<rect x="-320" y="-90" width="640" height="180" rx="28" fill="${RED}" stroke="#111" stroke-width="10"/><text x="0" y="40" font-size="120" font-weight="900" text-anchor="middle" fill="#fff">−42 000</text>`,-4);
+  const sh=shake(t,tm,.25,14);return `<g transform="translate(${sh[0]} ${sh[1]})">${s}</g>`}
+// L7 — мотоцикл
+function motoScene(t,t0){const tm=at(7,'мотоцикл'),tv=at(7,'вкладе'),tp=at(7,'проценты');let s='';
+  if(t<tv){s+=rays(540,900,OR,GRL,t*.08);
+    const k=pop(t,tm-.2);const dx=t>tm?Math.sin(t*20)*4:0;
+    s+=g(k,540+dx,1150,moto());
+    if(t>tm-.2) s+=hero('tema',{x:520+dx,y:900,s:.62,emo:'happy',armL:80,armR:80,breathe:0,bounce:Math.abs(Math.sin(t*12))*6});
+    if(t>tm) s+=`<g transform="translate(${520+dx} ${900-170*.62})"><rect x="-90" y="-30" width="180" height="44" rx="20" fill="#111"/><line x1="-90" y1="-10" x2="90" y2="-10" stroke="#111" stroke-width="10"/></g>`;
+    if(t>tm) s+=g(pop(t,tm+.2),860,520,`<path d="M0,-60 L14,-14 L60,0 L14,14 L0,60 L-14,14 L-60,0 L-14,-14Z" fill="#fff" stroke="#111" stroke-width="6" transform="rotate(${t*90})"/>`);
+    if(t<tm) s+=g(pop(t,t0+.1),540,900,bubble(520,'ХОЧУ МОТОЦИКЛ',{size:56,fill:ORD}));
+    const t300=at(7,'триста');if(t>t300)s+=plate(540,450,560,140,'−300 000 ₽',{bg:'#fff',fg:RED,size:96,rot:-4,sc:stamp(t,t300)});
+  } else {s+=navy();
+    s+=tx(540,330,'ВКЛАД ТЁМЫ',{size:86,fill:GRL,sw:12,rot:-3});
+    const v=lerp(1000000,700000,eo((t-tv)/.8));
+    s+=g(1,540,700,`<rect x="-420" y="-130" width="840" height="260" rx="30" fill="#22325f" stroke="#4a64a8" stroke-width="8"/><text x="0" y="50" font-size="140" font-weight="900" text-anchor="middle" fill="#fff">${fmt(v)}</text>`);
+    s+=g(pop(t,tv),540,920,`<text x="0" y="0" font-size="70" font-weight="900" text-anchor="middle" fill="#9fb3e6">под 10 % годовых</text>`);
+    if(t>tp) s+=g(stamp(t,tp+.3),540,1150,`<rect x="-340" y="-100" width="680" height="200" rx="30" fill="${GRN}" stroke="#111" stroke-width="10"/><text x="0" y="45" font-size="120" font-weight="900" text-anchor="middle" fill="#fff" stroke="#111" stroke-width="5" paint-order="stroke">+70 000</text>`,-3);
+  }
+  const sh=shake(t,at(7,'триста'),.25,12);return `<g transform="translate(${sh[0]} ${sh[1]})">${s}</g>`}
+// L8 — итог года
+function result(t,t0){const lt=t-t0;let s=navy();
+  s+=tx(540,250,'ИТОГ ГОДА',{size:100,fill:YEL,sw:14,rot:-3});
+  const tt=at(8,'семьсот'),tg=at(8,'гараже'),tn=at(8,'ноябрь'),tv=at(8,'вики'),tl=at(8,'она');
+  // Тёма column
+  const kv=eo((t-tt)/1.0);
+  s+=hero('tema',{x:270,y:620,s:.45,emo:t>tn?'sad':'smug',blink:blinkAt(t,1),breathe:Math.sin(t*3)});
+  s+=hero('vika',{x:810,y:620,s:.45,emo:t>tv?'happy':'neutral',blink:blinkAt(t,2),breathe:Math.sin(t*3+1)});
+  s+=g(stamp(t,t0+.2),540,590,tx(0,40,'VS',{size:150,fill:YEL,sw:16}));
+  const base=1250,maxh=520;
+  if(t>tt){s+=`<rect x="150" y="${base-maxh*.70*kv}" width="240" height="${maxh*.70*kv}" rx="18" fill="${OR}" stroke="#111" stroke-width="8"/>`;
+    s+=tx(270,base-maxh*.70*kv-24,fmt(770000*kv),{size:62,sw:10})}
+  if(t>tg){ // garage with motorcycle under snow
+    s+=g(pop(t,tg),270,base+120,`<g transform="scale(.45)"><polygon points="-260,-120 0,-260 260,-120" fill="#8a8f9c" stroke="#111" stroke-width="16"/><rect x="-240" y="-120" width="480" height="300" fill="#c9ced8" stroke="#111" stroke-width="16"/>${moto().replace('<g ','<g transform="translate(0 40) scale(.8)" ')}</g>`);
+    if(t>tn){s+=`<g transform="translate(270 ${base+120})">${[-80,-30,30,80].map((x,i)=>`<ellipse cx="${x}" cy="${-10+(i%2)*10}" rx="60" ry="26" fill="#fff" stroke="#111" stroke-width="5"/>`).join('')}</g>`}}
+  if(t>tv){const k=eo((t-tv)/1.0);s+=`<rect x="690" y="${base-maxh*.96*k}" width="240" height="${maxh*.96*k}" rx="18" fill="${PU}" stroke="#111" stroke-width="8"/>`;
+    s+=tx(810,base-maxh*.96*k-24,fmt(1053000*k),{size:62,sw:10})}
+  if(t>tn-.3&&t<tv)s+=snow(t,25,5,120);
+  if(t>tl) s+=plate(810,base+110,420,100,'НЕКОГДА ТРАТИТЬ',{bg:YEL,size:44,rot:4,sc:pop(t,tl)});
+  return s}
+// L9 — слоган
+function slogan(t,t0){let s=rays(540,960,'#111','#222',t*.05);
+  s+=g(stamp(t,t0+.1),540,760,`<rect x="-470" y="-120" width="940" height="240" rx="30" fill="#fff" stroke="#111" stroke-width="12"/><text x="0" y="-12" font-size="80" font-weight="900" text-anchor="middle" fill="#111">ГЛАВНЫЙ МИНУС</text><text x="0" y="80" font-size="80" font-weight="900" text-anchor="middle" fill="#111">МИЛЛИОНА</text>`,-3);
+  const tn=at(9,'не');
+  if(t>tn) s+=g(pop(t,tn),540,1000,`<text x="0" y="0" font-size="90" font-weight="900" text-anchor="middle" fill="#999" text-decoration="line-through">НЕ ПРОЦЕНТЫ</text><line x1="-330" y1="-30" x2="330" y2="-30" stroke="${RED}" stroke-width="14"/>`);
+  const ts=at(9,'ты');
+  if(t>ts) s+=g(stamp(t,ts),540,1230,`<rect x="-360" y="-110" width="720" height="220" rx="30" fill="${YEL}" stroke="#111" stroke-width="12"/><text x="0" y="50" font-size="140" font-weight="900" text-anchor="middle" fill="#111">ТЫ САМ</text>`,4);
+  const sh=shake(t,ts,.25,14);return `<g transform="translate(${sh[0]} ${sh[1]})">${s}</g>`}
+// L10 — финал
+function finale(t,t0){const lt=t-t0;const k=eo(lt/.35);const END=TM.lines[10].s+TM.lines[10].d+1.0;
+  if(t>END){ // bonus: Тёма в шлеме на мотоцикле в сугробе машет
+    let s=`<rect width="${W}" height="${H}" fill="#cfe3f5"/>${snow(t,60,9,200)}<ellipse cx="540" cy="1500" rx="700" ry="260" fill="#fff" stroke="#111" stroke-width="10"/>`;
+    s+=g(1,540,1300,moto());s+=`<ellipse cx="540" cy="1420" rx="460" ry="120" fill="#fff"/>`;
+    s+=hero('tema',{x:520,y:1080,s:.7,emo:'happy',armR:150+Math.sin(t*12)*25,armL:60,breathe:0});
+    s+=`<g transform="translate(520 ${1080-170*.7})"><path d="M-110,-10 Q-110,-120 0,-125 Q110,-120 110,-10 Z" fill="${RED}" stroke="#111" stroke-width="8"/></g>`;
+    s+=plate(540,560,520,120,'НОЯБРЬ ЖЕ',{bg:'#fff',size:70,rot:-4,sc:pop(t,END)});
+    return s}
+  let s=`<rect width="${W}" height="${H}" fill="${PU}"/>`;
+  s+=`<g transform="translate(${lerp(-W,0,k)} 0)"><polygon points="0,0 ${W},0 0,${H}" fill="${OR}"/></g>`;
+  s+=`<g transform="translate(${lerp(W,0,k)} 0)"><polygon points="${W},0 ${W},${H} 0,${H}" fill="${PU}"/></g>`;
+  s+=`<rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+  s+=g(stamp(t,t0+.3),540,300,`<rect x="-470" y="-120" width="940" height="240" rx="30" fill="#fff" stroke="#111" stroke-width="12"/><text x="0" y="-12" font-size="84" font-weight="900" text-anchor="middle" fill="#111">ВСТАВАЛ БЫ</text><text x="0" y="88" font-size="96" font-weight="900" text-anchor="middle" fill="${BLD}" class="mono">В 07:00?</text>`,-3);
+  s+=hero('tema',{x:290,y:820,s:.7,emo:'smug',blink:blinkAt(t,1),breathe:Math.sin(t*3),armR:150});
+  s+=plate(290,1130,400,110,'1 000 000 СРАЗУ',{bg:'#fff',size:44,rot:-5,sc:pop(t,t0+.7)});
+  s+=hero('vika',{x:790,y:1080,s:.7,emo:'happy',blink:blinkAt(t,2),breathe:Math.sin(t*3+1),armL:150});
+  s+=plate(790,1390,400,110,'3 000 × 365',{bg:'#fff',size:50,rot:5,sc:pop(t,t0+1.0)});
+  const pul=1+.05*Math.sin(t*6);
+  if(lt>1.8) s+=g(pop(t,t0+1.8)*pul,540,1790,`<rect x="-380" y="-70" width="760" height="140" rx="70" fill="${YEL}" stroke="#111" stroke-width="10"/><text x="0" y="26" font-size="70" font-weight="900" text-anchor="middle" fill="#111">ПИШИ В КОММЕНТЫ 👇</text>`);
+  return s}
+
+let TQ=0;
+function scene(t){
+  if(t<L(1)) return cardA(t,0);
+  if(t<TQ) return cardB(t,L(1));
+  if(t<L(2)) return versusQ(t,TQ);
+  if(t<L(3)) return temaGrab(t,L(2));
+  if(t<L(4)) return vikaCount(t,L(3));
+  if(t<L(5)) return temaBank(t,L(4));
+  if(t<L(6)) return vikaRun(t,L(5));
+  if(t<L(7)) return vikaMiss(t,L(6));
+  if(t<L(8)) return motoScene(t,L(7));
+  if(t<L(9)) return result(t,L(8));
+  if(t<L(10)) return slogan(t,L(9));
+  return finale(t,L(10));
+}
+const DEFS=`<defs><radialGradient id="vig" cx="50%" cy="45%" r="75%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".5"/></radialGradient>
+<pattern id="dots" width="60" height="60" patternUnits="userSpaceOnUse"><circle cx="30" cy="30" r="3" fill="#2c3d70"/></pattern>
+<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix type="saturate" values="0"/></filter></defs>`;
+const CUTS=()=>[L(1),TQ,L(2),L(3),L(4),at(4,'никаких'),L(5),at(5,'дождь')-.15,at(5,'мороз')-.15,at(5,'воскресенье')-.15,at(5,'тридцать')-.15,L(6),L(7),at(7,'вкладе'),L(8),L(9),L(10),TM.lines[10].s+TM.lines[10].d+1.0];
+function cover(){
+  let s=`<rect width="${W}" height="${H}" fill="${PU}"/><polygon points="0,0 ${W},0 0,${H}" fill="${OR}"/><rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+  s+=g(.7,300,620,suitcase());
+  s+=g(1,800,1150,alarmClock(130));
+  s+=hero('tema',{x:280,y:1180,s:.55,emo:'happy',armL:150,armR:150});
+  s+=hero('vika',{x:780,y:1560,s:.5,emo:'tired'});
+  s+=plate(540,210,960,150,'МИЛЛИОН ИЛИ',{bg:'#fff',size:96,rot:-3});
+  s+=plate(540,1780,960,150,'3000 КАЖДОЕ УТРО?',{bg:YEL,size:72,rot:3});
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${DEFS}${s}</svg>`;
+}
+function render(t){
+  if(t<0){document.getElementById('root').innerHTML=cover();return}
+  let c0=0;for(const c of CUTS())if(t>=c)c0=c;
+  const z=1+Math.min(.04,(t-c0)*.012);
+  const fl=CUTS().some(c=>t>=c&&t<c+.067)?`<rect width="${W}" height="${H}" fill="#fff" opacity=".55"/>`:'';
+  const END=TM.lines[10].s+TM.lines[10].d+1.0;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${DEFS}
+   <g transform="translate(540 960) scale(${z}) translate(-540 -960)">${scene(t)}</g>${fl}
+   ${t<END?subtitles(t):''}
+   <rect width="${W}" height="${H}" filter="url(#grain)" opacity=".05"/></svg>`;
+  document.getElementById('root').innerHTML=svg;
+}
+window.setup=(tm)=>{TM=tm;TQ=at(1,'что')-.1};
+window.render=render;
+</script></body></html>
