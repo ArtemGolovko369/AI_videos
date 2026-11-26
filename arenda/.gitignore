@@ -1,0 +1,6 @@
+build/frames/
+build/preview_*.png
+build/sheet*.png
+build/check.png
+build/sfx.wav
+build/mix.wav
