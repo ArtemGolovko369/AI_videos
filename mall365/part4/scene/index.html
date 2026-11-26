@@ -1,0 +1,102 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:#000;}
+  #stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:#0d1018;font-family:Inter,sans-serif;}
+  svg{position:absolute;left:0;top:0;}
+  .ui{position:absolute;left:0;top:0;width:1080px;height:1920px;pointer-events:none;}
+  #hud{position:absolute;left:0;right:0;top:150px;text-align:center;}
+  #day{display:inline-block;padding:14px 34px 12px;background:rgba(8,10,16,.82);border:3px solid rgba(255,255,255,.85);border-radius:18px;
+       color:#fff;font:900 64px/1 Inter;letter-spacing:4px;transform-origin:50% 50%;}
+  #day small{font-size:40px;color:#9aa6bd;letter-spacing:2px}
+  #bars{margin:16px auto 0;width:980px;display:flex;justify-content:center;gap:12px;}
+  .bar{width:236px;transition:none;display:flex;align-items:center;gap:8px;background:rgba(8,10,16,.75);border-radius:14px;padding:8px 10px;box-sizing:border-box;}
+  .bar .ic{font:34px/1 'Noto Color Emoji';width:40px;text-align:center}
+  .bar .col{flex:1}
+  .bar .lb{font:800 20px/1 Inter;color:#cfd6e4;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between}
+  .bar .tr{height:14px;border-radius:7px;background:rgba(255,255,255,.15);overflow:hidden}
+  .bar .fl{height:100%;border-radius:7px;background:#e9edf5}
+  #zone{display:inline-block;margin-top:10px;padding:7px 16px;border-radius:10px;font:900 26px/1 Inter;letter-spacing:2px;color:#fff;border:3px solid #0b0d12}
+  #bars .bar{width:222px}
+  .bar .lb{white-space:nowrap}
+  #v1{font-size:17px;letter-spacing:1px}
+  #bars .bar:nth-child(2){width:290px}
+  #mcount{display:inline-block;margin-top:12px;padding:6px 16px;border-radius:10px;background:rgba(8,10,16,.75);color:#cfd6e4;font:800 26px/1 'JetBrains Mono';letter-spacing:2px}
+  #mcount b{color:#fff}
+  #plates{position:absolute;left:0;right:0;top:490px;text-align:center;}
+  .plate{display:block;width:max-content;margin:0 auto 14px;padding:12px 26px;border-radius:12px;font:900 38px/1.05 Inter;color:#fff;letter-spacing:1px;
+         border:3px solid #0b0d12;box-shadow:0 6px 0 rgba(0,0,0,.45);transform-origin:50% 50%;}
+  .plate.p{background:#e0322f}.plate.s{background:#22b45e}
+  .plate span{opacity:.78;font-weight:800;font-size:30px;margin-right:10px}
+  #subs{position:absolute;left:60px;right:60px;top:1290px;height:300px;display:flex;align-items:center;justify-content:center;text-align:center;}
+  #subs .ln{font:900 84px/1.08 Inter;color:#fff;letter-spacing:1px;
+     -webkit-text-stroke:12px #07080c;paint-order:stroke fill;text-shadow:0 8px 18px rgba(0,0,0,.7);}
+  #subs .w{display:inline-block;margin:0 .14em;transform-origin:50% 70%}
+  .y{color:#ffd23f}.r{color:#ff4040}.g{color:#3ddc84}
+  #flash{position:absolute;inset:0;background:#000;opacity:0}
+  #redflash{position:absolute;inset:0;box-shadow:inset 0 0 220px 60px rgba(255,30,30,.9);opacity:0}
+  #final{position:absolute;left:0;right:0;top:640px;text-align:center;opacity:0}
+  #final .a{display:inline-block;background:#e0322f;color:#fff;font:900 62px/1 Inter;padding:20px 34px;border-radius:16px;border:4px solid #0b0d12;letter-spacing:2px}
+  #final .b{margin-top:34px;color:#fff;font:900 96px/1.02 Inter;-webkit-text-stroke:12px #07080c;paint-order:stroke fill}
+  #final .b em{font-style:normal;color:#ffd23f}
+  #title{position:absolute;left:0;right:0;top:640px;text-align:center;color:#fff;opacity:0}
+  #title .n{font:900 300px/0.9 Inter;letter-spacing:-6px;color:#f3f5f9;text-shadow:0 0 40px rgba(160,200,255,.35)}
+  #title .t{font:900 76px/1.05 Inter;letter-spacing:6px;margin-top:20px}
+  #title .c{display:inline-block;margin-top:36px;font:800 40px/1 Inter;letter-spacing:14px;color:#2fd27a;border:3px solid #2fd27a;padding:14px 18px 12px 32px;border-radius:10px}
+</style></head>
+<body>
+<div id="stage">
+  <svg id="sv" width="1080" height="1920" viewBox="0 0 1080 1920">
+    <defs>
+      <filter id="grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="1"/>
+        <feColorMatrix type="saturate" values="0"/>
+      </filter>
+      <radialGradient id="vig" cx="50%" cy="48%" r="75%">
+        <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#000" stop-opacity=".78"/>
+      </radialGradient>
+      <pattern id="bpgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0H0V40" fill="none" stroke="#3d74b8" stroke-width="1" opacity=".55"/>
+      </pattern>
+      <pattern id="bpgrid2" width="200" height="200" patternUnits="userSpaceOnUse">
+        <path d="M200 0H0V200" fill="none" stroke="#5b92d6" stroke-width="2" opacity=".55"/>
+      </pattern>
+      <linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1a1f2b"/><stop offset="1" stop-color="#0b0d13"/>
+      </linearGradient>
+      <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0c0f16"/><stop offset="1" stop-color="#171c27"/>
+      </linearGradient>
+      <radialGradient id="fogBlob"><stop offset="0" stop-color="#e6edf5" stop-opacity=".9"/><stop offset="1" stop-color="#e6edf5" stop-opacity="0"/></radialGradient>
+      <radialGradient id="warmBlob"><stop offset="0" stop-color="#ffb347" stop-opacity=".75"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+      <radialGradient id="greenBlob"><stop offset="0" stop-color="#2fd27a" stop-opacity=".7"/><stop offset="1" stop-color="#2fd27a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="spot"><stop offset="0" stop-color="#fffbe8" stop-opacity=".85"/><stop offset=".6" stop-color="#fffbe8" stop-opacity=".25"/><stop offset="1" stop-color="#fffbe8" stop-opacity="0"/></radialGradient>
+    </defs>
+    <g id="scA"></g>
+    <g id="scB"></g>
+    <rect width="1080" height="1920" fill="url(#vig)"/>
+    <rect id="grainR" width="1080" height="1920" filter="url(#grain)" opacity=".07" style="mix-blend-mode:screen"/>
+  </svg>
+  <div class="ui">
+    <div id="title"><div class="n">365</div><div class="t">ДНЕЙ В ТОРГОВОМ<br>ЦЕНТРЕ</div><div class="c">ЧАСТЬ 4</div></div>
+    <div id="hud">
+      <div id="day">ДЕНЬ 1 <small>/ 365</small></div>
+      <div><div id="zone">ЗОНА: НА МАРШРУТЕ</div></div>
+      <div id="bars">
+        <div class="bar"><div class="ic">🍞</div><div class="col"><div class="lb"><b>ЕДА</b><b id="v0"></b></div><div class="tr"><div class="fl" id="b0"></div></div></div></div>
+        <div class="bar"><div class="ic">🔋</div><div class="col"><div class="lb"><b>ЗАРЯД</b><b id="v1"></b></div><div class="tr"><div class="fl" id="b1"></div></div></div></div>
+        <div class="bar"><div class="ic">😴</div><div class="col"><div class="lb"><b>СОН</b><b id="v2"></b></div><div class="tr"><div class="fl" id="b2"></div></div></div></div>
+        <div class="bar" id="wbar"><div class="ic">💧</div><div class="col"><div class="lb"><b>ВОДА</b><b id="v3"></b></div><div class="tr"><div class="fl" id="b3"></div></div></div></div>
+      </div>
+      <div id="mcount">МАНЕКЕНЫ: <b>13</b></div>
+    </div>
+    <div id="plates"></div>
+    <div id="subs"></div>
+    
+    <div id="redflash"></div>
+    <div id="flash"></div>
+  </div>
+</div>
+<script src="scenes.js"></script>
+</body></html>
